@@ -1,73 +1,74 @@
-# React + TypeScript + Vite
+# Veil
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**Type:** Non-custodial Solana browser wallet extension  
+**Goal:** Make everyday Solana payments unlinkable by default
 
-Currently, two official plugins are available:
+Ghosty is a privacy-focused Solana wallet that manages one locally encrypted master seed to deterministically derive one-time burner wallets. It ensures that transactions are unlinkable and private by default through automated funding routing and integration with Privacy Cash.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+---
 
-## React Compiler
+## Core Concept
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+The wallet manages **one locally encrypted master seed**.  
+From this seed, it deterministically derives **one-time burner wallets** using HD paths.
 
-## Expanding the ESLint configuration
+Each burner wallet is:
+- Used **once** as a receive address
+- **Never reused**
+- **Drained** after use
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+---
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Transaction Flow
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+1. **Generation:** User generates a fresh burner address.
+2. **Reception:** Burner receives SOL or SPL tokens (e.g., USDC).
+3. **Monitoring:** Extension monitors incoming transactions via Solana RPC.
+4. **Forwarding:** After receipt, funds are forwarded with a **randomized delay** to reduce timing correlation.
+5. **Deposit:** Funds are deposited directly into **Privacy Cash** using its SDK.
+6. **Withdrawal:** User later withdraws from Privacy Cash to a fresh, unrelated wallet.
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+---
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Privacy Model
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+- **No address reuse:** Every transaction uses a fresh address.
+- **Timing obfuscation:** Randomized delays prevent timing correlation.
+- **On-chain unlinkability:** Handled by Privacy Cash (commitments, Merkle tree, nullifiers).
+- **Privacy by Design:** Achieved through key isolation + automation, not user discipline.
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+---
+
+## Security & Trust Assumptions
+
+- **Local Signing:** All transaction signing happens locally inside the extension.
+- **No Backend Access:** No backend ever sees private keys.
+- **Ephemeral Keys:** Burner private keys are never persistently stored.
+- **Metadata:** Only non-sensitive metadata may touch auxiliary services.
+
+---
+
+## What It Is NOT
+
+- ❌ **Not** a custodial wallet.
+- ❌ **Not** a centralized mixer.
+- ❌ **Not** maintaining its own privacy pool or ZK circuits.
+
+---
+
+## Target Users
+
+- Privacy-conscious Solana users
+- DAO treasuries
+- Airdrop recipients
+- OTC desks
+- Builders needing privacy-by-default flows
+
+---
+
+## Hackathon Positioning
+
+**Category:** Privacy tooling  
+**Key integration:** Privacy Cash SDK  
+**Value proposition:**  
+> “A privacy-by-default Solana wallet that uses one-time addresses and automated routing into Privacy Cash to prevent wallet linking and graph analysis.”
