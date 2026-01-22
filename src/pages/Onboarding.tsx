@@ -1,9 +1,11 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowRight, Check, Copy, Eye, EyeOff } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { generateMnemonic, mnemonicToSeed, storeEncryptedSeed, validateMnemonic } from '../utils/keyManager';
+import { unlockWallet } from '../utils/walletLock';
 
-type OnboardingStep = 'welcome' | 'create' | 'restore' | 'verify';
+type OnboardingStep = 'welcome' | 'create' | 'restore' | 'password';
 
 const Onboarding = () => {
   const navigate = useNavigate();
@@ -12,32 +14,97 @@ const Onboarding = () => {
   const [showSeed, setShowSeed] = useState(false);
   const [restoreInput, setRestoreInput] = useState('');
   const [restoreError, setRestoreError] = useState('');
+  const [mnemonic, setMnemonic] = useState<string>('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
 
-  // Mock Seed Phrase
-  const mockSeed = [
-    "ghost", "valley", "shield", "protect", "random", "solar",
-    "energy", "crypto", "privacy", "secure", "logic", "wave"
-  ];
+  // Generate mnemonic when entering create step
+  useEffect(() => {
+    if (step === 'create' && !mnemonic) {
+      const newMnemonic = generateMnemonic();
+      setMnemonic(newMnemonic);
+    }
+  }, [step, mnemonic]);
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(mockSeed.join(" "));
+    navigator.clipboard.writeText(mnemonic);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleComplete = () => {
-    console.log('[Veil] Wallet created/restored. Navigating to home...');
-    navigate('/home');
+  const handleCreateWallet = async () => {
+    if (!password || password.length < 8) {
+      setPasswordError('Password must be at least 8 characters');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setPasswordError('Passwords do not match');
+      return;
+    }
+
+    setIsCreating(true);
+    try {
+      const seed = await mnemonicToSeed(mnemonic);
+      await storeEncryptedSeed(seed, password);
+      await unlockWallet();
+      
+      // Store password temporarily in sessionStorage for first burner generation
+      // This will be cleared after first burner is created
+      sessionStorage.setItem('veil:temp_password', password);
+      
+      navigate('/home');
+    } catch (error) {
+      console.error('[Veil] ❌ Error creating wallet:', error);
+      setPasswordError('Failed to create wallet. Please try again.');
+    } finally {
+      setIsCreating(false);
+    }
   };
 
-  const handleRestore = () => {
+  const handleRestore = async () => {
     const words = restoreInput.trim().split(/\s+/);
     if (words.length !== 12) {
       setRestoreError('Please enter exactly 12 words');
       return;
     }
-    console.log('[Veil] Restoring wallet from seed phrase...');
-    handleComplete();
+
+    const mnemonicPhrase = words.join(' ');
+    if (!validateMnemonic(mnemonicPhrase)) {
+      setRestoreError('Invalid seed phrase. Please check your words.');
+      return;
+    }
+
+    setMnemonic(mnemonicPhrase);
+    setStep('password');
+    setRestoreError('');
+  };
+
+  const handleRestoreWallet = async () => {
+    if (!password || password.length < 8) {
+      setPasswordError('Password must be at least 8 characters');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setPasswordError('Passwords do not match');
+      return;
+    }
+
+    setIsRestoring(true);
+    try {
+      const seed = await mnemonicToSeed(mnemonic);
+      await storeEncryptedSeed(seed, password);
+      await unlockWallet();
+      
+      navigate('/home');
+    } catch (error) {
+      console.error('[Veil] ❌ Error restoring wallet:', error);
+      setPasswordError('Failed to restore wallet. Please try again.');
+    } finally {
+      setIsRestoring(false);
+    }
   };
 
   const slideVariants = {
@@ -115,7 +182,7 @@ const Onboarding = () => {
 
             <div className="relative">
               <div className={`grid grid-cols-3 gap-2 transition-all ${!showSeed ? 'blur-md' : ''}`}>
-                {mockSeed.map((word, i) => (
+                {mnemonic.split(' ').map((word, i) => (
                   <div key={i} className="bg-white/5 border border-white/10 rounded-lg p-2 text-center text-xs text-gray-300 font-mono">
                     <span className="text-gray-600 mr-1.5 select-none">{i + 1}</span>
                     {word}
@@ -159,7 +226,7 @@ const Onboarding = () => {
                 </button>
 
                 <button
-                  onClick={handleComplete}
+                  onClick={() => setStep('password')}
                   className="w-full py-3.5 px-4 bg-gradient-to-r from-blue-600 to-blue-500 text-white font-semibold rounded-xl hover:from-blue-500 hover:to-blue-400 transition-all shadow-lg shadow-blue-500/20"
                 >
                   I Saved It Securely
@@ -232,6 +299,95 @@ const Onboarding = () => {
             <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-3">
               <p className="text-xs text-yellow-500/80 text-center">
                 ⚠️ Never share your seed phrase. Veil will never ask for it.
+              </p>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Password Step (for both create and restore) */}
+        {step === 'password' && (
+          <motion.div
+            key="password"
+            variants={slideVariants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            className="z-10 w-full max-w-xs space-y-6"
+          >
+            <div className="text-center">
+              <h2 className="text-xl font-bold text-white">Set Password</h2>
+              <p className="text-gray-400 text-sm mt-2">
+                Create a password to encrypt your wallet. You'll need this to unlock your wallet.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setPasswordError('');
+                  }}
+                  placeholder="Enter password (min 8 characters)"
+                  className="w-full py-3 px-4 bg-white/5 border border-white/10 rounded-xl text-sm text-gray-300 placeholder-gray-600 focus:outline-none focus:border-white/20 transition-colors"
+                />
+              </div>
+
+              <div>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => {
+                    setConfirmPassword(e.target.value);
+                    setPasswordError('');
+                  }}
+                  placeholder="Confirm password"
+                  className="w-full py-3 px-4 bg-white/5 border border-white/10 rounded-xl text-sm text-gray-300 placeholder-gray-600 focus:outline-none focus:border-white/20 transition-colors"
+                />
+              </div>
+
+              {passwordError && (
+                <p className="text-red-400 text-xs">{passwordError}</p>
+              )}
+            </div>
+
+            <div className="space-y-3">
+              <button
+                onClick={() => {
+                  if (mnemonic) {
+                    handleCreateWallet();
+                  } else {
+                    handleRestoreWallet();
+                  }
+                }}
+                disabled={isCreating || isRestoring || !password || !confirmPassword}
+                className={`w-full py-3.5 px-4 font-semibold rounded-xl transition-all ${
+                  password && confirmPassword && !isCreating && !isRestoring
+                    ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white hover:from-blue-500 hover:to-blue-400 shadow-lg shadow-blue-500/20'
+                    : 'bg-white/10 text-gray-500 cursor-not-allowed'
+                }`}
+              >
+                {isCreating || isRestoring ? 'Processing...' : 'Continue'}
+              </button>
+
+              <button
+                onClick={() => {
+                  setStep(mnemonic && restoreInput ? 'restore' : 'create');
+                  setPassword('');
+                  setConfirmPassword('');
+                  setPasswordError('');
+                }}
+                className="w-full text-center text-gray-600 text-sm hover:text-gray-400 transition-colors"
+              >
+                ← Back
+              </button>
+            </div>
+
+            <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3">
+              <p className="text-xs text-blue-400/80 text-center">
+                🔒 Your password encrypts your seed phrase locally. We never store it.
               </p>
             </div>
           </motion.div>

@@ -23,7 +23,9 @@
 - [x] Restore wallet flow implementation (Onboarding)
 - [x] Reveal/hide seed phrase with blur effect
 - [x] Activity filters (all, connections, transfers) in History
-- [x] Burner management stats in Settings
+- [x] Settings page redesign (Phantom/MetaMask inspired)
+- [x] Export Private Key feature (password-gated, Base58 format)
+- [x] Lock Wallet functionality
 - [x] Updated messaging: "dApps never see your main wallet"
 
 ### UI/UX Refinements ✅
@@ -35,20 +37,24 @@
 
 ## Milestone 2: Core Wallet & Burner Logic
 
-### Key Management
-- [ ] Implement Real Key Management (BIP39, Ed25519, Encrypted LocalStorage)
-- [ ] Secure master seed encryption/decryption with password
-- [ ] Replace Mock "Generate Burner" with real HD Wallet derivation
-- [ ] Deterministic burner recovery from master seed
+### Key Management ✅
+- [x] Implement Real Key Management (BIP39, Ed25519, Encrypted LocalStorage)
+- [x] Secure master seed encryption/decryption with password
+- [x] Replace Mock "Generate Burner" with real HD Wallet derivation
+- [x] Deterministic burner recovery from master seed
+- [x] Private key export functionality (Base58 format, full 64-byte secretKey)
+- [x] Public key verification for exported keys
 
-### Burner Wallet System
+### Burner Wallet System ✅
+- [x] Auto-generate first burner wallet on unlock
+- [x] Sequential account naming (Account 1, Account 2, etc.)
+- [x] Burner indexing for deterministic recovery
 - [ ] Implement site-bound burner wallet generation
 - [ ] Session-scoped burner lifecycle management
 - [ ] Balance-based burner reuse logic:
   - Balance > 0 → reuse current burner
   - Balance == 0 → auto-generate new burner
 - [ ] Burner retirement system (mark retired, never reuse)
-- [ ] Burner indexing for deterministic recovery
 
 ### Solana Integration
 - [ ] Integrate Solana Web3.js for real account queries

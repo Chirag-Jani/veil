@@ -1,57 +1,226 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { Check, ChevronDown, Copy, Globe, History, Plus, RefreshCw, Settings, Shield, Unlink, X } from 'lucide-react';
-import { useState } from 'react';
+import { Check, ChevronDown, Copy, Globe, History, Plus, RefreshCw, Settings, Shield, X } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-
-// Mock connected sites data
-const mockConnectedSites = [
-  { id: 1, domain: 'raydium.io', favicon: '🌊', connected: true },
-  { id: 2, domain: 'jupiter.ag', favicon: '🪐', connected: false },
-  { id: 3, domain: 'tensor.trade', favicon: '🎨', connected: true },
-];
-
-// Mock burner wallets data
-const mockBurnerWallets = [
-  { id: 1, address: '8xzt...9jLk', fullAddress: '8xztK2mN...9jLk', balance: 2.45, site: 'raydium.io', isActive: true },
-  { id: 2, address: 'Hq3m...7vRt', fullAddress: 'Hq3mP4kL...7vRt', balance: 0.5, site: 'tensor.trade', isActive: false },
-  { id: 3, address: 'F7ka...2mNp', fullAddress: 'F7kaL9qR...2mNp', balance: 0, site: 'jupiter.ag', isActive: false },
-];
+import UnlockWallet from '../components/UnlockWallet';
+import { generateBurnerKeypair, getDecryptedSeed, hasWallet } from '../utils/keyManager';
+import { formatAddress, getAddressFromKeypair, getAllBurnerWallets, getNextAccountNumber, storeBurnerWallet, type BurnerWallet } from '../utils/storage';
+import { extendSession, isSessionValid, isWalletLocked } from '../utils/walletLock';
 
 const Home = () => {
   const navigate = useNavigate();
-  const [activeWallet, setActiveWallet] = useState(mockBurnerWallets[0]);
+  const [isLocked, setIsLocked] = useState(true);
+  const [hasWalletState, setHasWalletState] = useState(false);
+  const [activeWallet, setActiveWallet] = useState<BurnerWallet | null>(null);
+  const [burnerWallets, setBurnerWallets] = useState<BurnerWallet[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showWalletList, setShowWalletList] = useState(false);
   const [showSitesList, setShowSitesList] = useState(false);
   const [showCopyPopup, setShowCopyPopup] = useState(false);
+  const [password, setPassword] = useState(''); // Store password in memory during session
 
-  const totalBalance = mockBurnerWallets.reduce((sum, w) => sum + w.balance, 0);
+  const loadWallets = useCallback(async () => {
+    try {
+      const wallets = await getAllBurnerWallets();
+      setBurnerWallets(wallets);
+      if (wallets.length > 0) {
+        setActiveWallet(wallets.find(w => w.isActive) || wallets[0]);
+      }
+    } catch (error) {
+      console.error('[Veil] Error loading wallets:', error);
+    }
+  }, []);
 
-  const generateNewBurner = () => {
+  const generateNewBurner = useCallback(async (pwd?: string) => {
+    // Try to get password from: parameter, state, or sessionStorage (for first-time generation)
+    let currentPassword = pwd || password;
+    if (!currentPassword) {
+      const tempPassword = sessionStorage.getItem('veil:temp_password');
+      if (tempPassword) {
+        currentPassword = tempPassword;
+        setPassword(tempPassword); // Store in state for future use
+        sessionStorage.removeItem('veil:temp_password'); // Clear temp storage
+      }
+    }
+    
+    if (!currentPassword) {
+      // Password not available - gracefully lock wallet and show unlock screen
+      setIsLocked(true);
+      setPassword('');
+      return;
+    }
+
     setIsGenerating(true);
-    console.log(`[Veil] Generating new burner wallet...`);
-    setTimeout(() => {
-      const newAddr = "F7ka..." + Math.random().toString(36).substring(2, 6);
-      console.log(`[Veil] New burner generated: ${newAddr}`);
+    try {
+      const seed = await getDecryptedSeed(currentPassword);
+      const { keypair, index } = await generateBurnerKeypair(seed);
+      const address = getAddressFromKeypair(keypair);
+      
+      // Get next account number (Account 1, Account 2, etc.)
+      const accountNumber = await getNextAccountNumber();
+      const accountName = `Account ${accountNumber}`;
+
+      const newWallet: BurnerWallet = {
+        id: Date.now(),
+        address: formatAddress(address),
+        fullAddress: address,
+        balance: 0,
+        site: accountName,
+        isActive: true, // Make first burner active
+        index,
+      };
+
+      await storeBurnerWallet(newWallet);
+      await loadWallets();
+    } catch (error) {
+      // Handle errors gracefully - lock wallet instead of showing alerts
+      console.error('[Veil] Error generating burner:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('DOMException') || errorMessage.includes('decrypt') || errorMessage.includes('password')) {
+        // Password-related errors - lock wallet
+        setIsLocked(true);
+        setPassword('');
+      } else {
+        // Other errors - also lock wallet for security
+        setIsLocked(true);
+        setPassword('');
+      }
+    } finally {
       setIsGenerating(false);
-    }, 1500);
+    }
+  }, [password, loadWallets]);
+
+  const checkWalletState = useCallback(async () => {
+    try {
+      const walletExists = await hasWallet();
+      setHasWalletState(walletExists);
+
+      if (!walletExists) {
+        navigate('/onboarding');
+        return;
+      }
+
+      const locked = await isWalletLocked();
+      setIsLocked(locked);
+
+      if (!locked) {
+        await loadWallets();
+        
+        // Auto-generate first burner if none exist and wallet is unlocked
+        const wallets = await getAllBurnerWallets();
+        if (wallets.length === 0 && !isGenerating) {
+          // Try to get password from state or sessionStorage
+          const currentPassword = password || sessionStorage.getItem('veil:temp_password');
+          if (currentPassword) {
+            if (!password) {
+              setPassword(currentPassword); // Store in state
+            }
+            // Generate burner - errors will be handled gracefully inside
+            await generateNewBurner(currentPassword);
+          } else {
+            // No password available - lock wallet gracefully
+            setIsLocked(true);
+          }
+        }
+      }
+    } catch (error) {
+      // Handle any unexpected errors gracefully
+      console.error('[Veil] Error checking wallet state:', error);
+      setIsLocked(true);
+      setPassword('');
+    }
+  }, [navigate, loadWallets, isGenerating, password, generateNewBurner]);
+
+  // Check wallet state on mount
+  useEffect(() => {
+    checkWalletState();
+  }, [checkWalletState]);
+
+  // Check session validity periodically
+  useEffect(() => {
+    if (!isLocked) {
+      const interval = setInterval(async () => {
+        const valid = await isSessionValid();
+        if (!valid) {
+          setIsLocked(true);
+          setPassword(''); // Clear password from memory
+        } else {
+          extendSession();
+        }
+      }, 60000); // Check every minute
+
+      return () => clearInterval(interval);
+    }
+  }, [isLocked]);
+
+  const handleUnlock = async (unlockPassword: string) => {
+    try {
+      setPassword(unlockPassword);
+      setIsLocked(false);
+      await loadWallets();
+      
+      // Auto-generate first burner if none exist
+      const wallets = await getAllBurnerWallets();
+      if (wallets.length === 0) {
+        // Generate burner - errors will be handled gracefully inside
+        await generateNewBurner(unlockPassword);
+      }
+    } catch (error) {
+      // Handle unlock errors gracefully - lock wallet again
+      console.error('[Veil] Error during unlock:', error);
+      setIsLocked(true);
+      setPassword('');
+    }
   };
 
+  const totalBalance = burnerWallets.reduce((sum, w) => sum + w.balance, 0);
+
   const handleCopy = () => {
-    navigator.clipboard.writeText(activeWallet.fullAddress);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    if (activeWallet) {
+      navigator.clipboard.writeText(activeWallet.fullAddress);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   const handleMigrateFunds = () => {
-    console.log(`[Veil] User initiated migration to Privacy Cash...`);
-    console.log(`[Veil] Amount: ${activeWallet.balance} SOL from ${activeWallet.address}`);
+    if (activeWallet) {
+      // Migration functionality coming soon
+    }
   };
 
-  const handleDisconnect = (domain: string) => {
-    console.log(`[Veil] Disconnecting from ${domain}...`);
-  };
+
+  // Show unlock screen if wallet is locked
+  if (isLocked && hasWalletState) {
+    return <UnlockWallet onUnlock={handleUnlock} />;
+  }
+
+  // Show loading state while generating first burner
+  if (!activeWallet && burnerWallets.length === 0) {
+    return (
+      <div className="h-full w-full bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          {isGenerating ? (
+            <>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-4"></div>
+              <p className="text-gray-400">Generating your first burner wallet...</p>
+            </>
+          ) : (
+            <>
+              <p className="text-gray-400 mb-4">No burner wallets yet</p>
+              <button
+                onClick={() => generateNewBurner()}
+                className="px-4 py-2 bg-white text-black rounded-lg hover:bg-gray-200"
+              >
+                Generate First Burner
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full w-full bg-black text-white relative flex flex-col overflow-hidden font-sans">
@@ -72,7 +241,7 @@ const Home = () => {
             <div className="flex flex-col justify-center">
               <span className="text-[11px] text-gray-500 font-medium leading-none mb-0.5">@veil</span>
               <div className="flex items-center gap-1.5">
-                <span className="text-sm font-bold text-white tracking-tight">{activeWallet.site}</span>
+                <span className="text-sm font-bold text-white tracking-tight">{activeWallet?.site || 'No site'}</span>
                 <ChevronDown className="w-3.5 h-3.5 text-gray-500 group-hover:text-gray-300 transition-colors" />
               </div>
             </div>
@@ -99,11 +268,7 @@ const Home = () => {
             className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors border border-white/5 relative"
           >
             <Globe className="w-4 h-4 text-gray-400" />
-            {mockConnectedSites.filter(s => s.connected).length > 0 && (
-              <div className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 rounded-full text-[9px] font-bold flex items-center justify-center">
-                {mockConnectedSites.filter(s => s.connected).length}
-              </div>
-            )}
+            {/* TODO: Show connected sites count when implemented */}
           </button>
           <button onClick={() => navigate('/history')} className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors border border-white/5">
             <History className="w-4 h-4 text-gray-400" />
@@ -123,13 +288,13 @@ const Home = () => {
           className="text-center mb-4"
         >
           <h1 className="text-5xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-b from-white via-gray-100 to-gray-400 mb-1">
-            {activeWallet.balance.toFixed(2)}
+            {activeWallet?.balance.toFixed(2) || '0.00'}
           </h1>
           <div className="flex items-center justify-center gap-2 mb-3">
             <span className="text-lg text-gray-400 font-medium">SOL</span>
             <span className="text-xs text-gray-600">•</span>
             <span className="text-sm text-gray-500 font-medium">
-              ≈ ${(activeWallet.balance * 145).toFixed(2)}
+              ≈ ${((activeWallet?.balance || 0) * 145).toFixed(2)}
             </span>
           </div>
         </motion.div>
@@ -138,9 +303,9 @@ const Home = () => {
         <div className="flex flex-col gap-2 mb-2">
           <button
             onClick={handleMigrateFunds}
-            disabled={activeWallet.balance === 0}
+            disabled={!activeWallet || activeWallet.balance === 0}
             className={`py-3 px-4 font-semibold rounded-xl text-sm flex items-center justify-center gap-2 transition-all shadow-lg ${
-              activeWallet.balance > 0
+              activeWallet && activeWallet.balance > 0
                 ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:from-purple-500 hover:to-blue-500 active:scale-[0.98]'
                 : 'bg-white/5 text-gray-500 cursor-not-allowed border border-white/10'
             }`}
@@ -149,10 +314,10 @@ const Home = () => {
             <span>Migrate to Privacy</span>
           </button>
           <button
-            onClick={generateNewBurner}
-            disabled={isGenerating || activeWallet.balance > 0}
+            onClick={() => generateNewBurner()}
+            disabled={isGenerating || (activeWallet?.balance ?? 0) > 0}
             className={`py-3 px-4 font-medium rounded-xl text-sm border flex items-center justify-center gap-2 transition-all ${
-              activeWallet.balance === 0
+              !activeWallet || (activeWallet.balance ?? 0) === 0
                 ? 'bg-white/5 text-white border-white/20 hover:bg-white/10 hover:border-white/30 active:scale-[0.98]'
                 : 'bg-white/5 text-gray-600 border-white/5 cursor-not-allowed'
             }`}
@@ -162,7 +327,7 @@ const Home = () => {
           </button>
         </div>
 
-        {activeWallet.balance > 0 && (
+        {activeWallet && activeWallet.balance > 0 && (
           <div className="flex items-center justify-center gap-1.5 mb-1">
             <div className="w-1 h-1 rounded-full bg-yellow-400/60" />
             <p className="text-[10px] text-center text-gray-500">
@@ -202,11 +367,11 @@ const Home = () => {
               </div>
 
               <div className="px-3 pb-3 max-h-64 overflow-y-auto">
-                {mockBurnerWallets.map((wallet) => (
+                {burnerWallets.map((wallet) => (
                   <button
                     key={wallet.id}
                     onClick={() => { setActiveWallet(wallet); setShowWalletList(false); }}
-                    className={`w-full p-2.5 rounded-lg flex items-center gap-2.5 transition-colors mb-1.5 ${activeWallet.id === wallet.id
+                    className={`w-full p-2.5 rounded-lg flex items-center gap-2.5 transition-colors mb-1.5 ${activeWallet?.id === wallet.id
                       ? 'bg-white/10 border border-white/20'
                       : 'bg-white/5 border border-transparent hover:bg-white/10'
                       }`}
@@ -217,7 +382,7 @@ const Home = () => {
                     <div className="flex-1 text-left">
                       <div className="flex items-center gap-1.5">
                         <span className="text-xs font-medium text-white">{wallet.site}</span>
-                        {activeWallet.id === wallet.id && (
+                        {activeWallet?.id === wallet.id && (
                           <span className="px-1 py-0.5 text-[8px] bg-green-500/20 text-green-400 rounded font-bold">ACTIVE</span>
                         )}
                       </div>
@@ -232,7 +397,8 @@ const Home = () => {
 
                 <button
                   onClick={() => { setShowWalletList(false); generateNewBurner(); }}
-                  className="w-full p-2.5 rounded-lg flex items-center gap-2.5 bg-white/5 hover:bg-white/10 border border-dashed border-white/20 transition-colors mt-1"
+                  disabled={isGenerating}
+                  className="w-full p-2.5 rounded-lg flex items-center gap-2.5 bg-white/5 hover:bg-white/10 border border-dashed border-white/20 transition-colors mt-1 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <div className="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center">
                     <Plus className="w-4 h-4 text-gray-400" />
@@ -282,32 +448,11 @@ const Home = () => {
               </div>
 
               <div className="px-3 pb-4 max-h-64 overflow-y-auto">
-                {mockConnectedSites.filter(s => s.connected).length === 0 ? (
-                  <div className="text-center py-6">
-                    <Globe className="w-10 h-10 text-gray-600 mx-auto mb-2" />
-                    <p className="text-gray-500 text-xs">No connected sites</p>
-                  </div>
-                ) : (
-                  mockConnectedSites.filter(s => s.connected).map((site) => (
-                    <div key={site.id} className="p-2.5 rounded-lg bg-white/5 border border-white/10 flex items-center justify-between mb-1.5">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-base">
-                          {site.favicon}
-                        </div>
-                        <div>
-                          <p className="text-xs font-medium text-white">{site.domain}</p>
-                          <div className="flex items-center gap-1 mt-0.5">
-                            <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                            <span className="text-[10px] text-gray-500">Connected</span>
-                          </div>
-                        </div>
-                      </div>
-                      <button onClick={() => handleDisconnect(site.domain)} className="p-1.5 hover:bg-red-500/10 rounded-md group">
-                        <Unlink className="w-3.5 h-3.5 text-gray-500 group-hover:text-red-400" />
-                      </button>
-                    </div>
-                  ))
-                )}
+                <div className="text-center py-6">
+                  <Globe className="w-10 h-10 text-gray-600 mx-auto mb-2" />
+                  <p className="text-gray-500 text-xs">No connected sites</p>
+                  <p className="text-gray-600 text-[10px] mt-2">Site connections will appear here</p>
+                </div>
               </div>
             </motion.div>
           </>
@@ -342,7 +487,7 @@ const Home = () => {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-gray-500 font-mono">{activeWallet.address}</span>
+                  <span className="text-[10px] text-gray-500 font-mono">{activeWallet?.address || ''}</span>
                   {copied ? (
                     <Check className="w-3 h-3 text-green-400" />
                   ) : (

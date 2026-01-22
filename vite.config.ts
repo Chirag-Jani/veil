@@ -5,8 +5,34 @@ import { defineConfig } from 'vite';
 
 // https://vite.dev/config/
 export default defineConfig({
+  define: {
+    'global': 'globalThis',
+    'process.env': '{}',
+    'process.browser': 'true',
+  },
+  resolve: {
+    alias: {
+      buffer: 'buffer/',
+      process: 'process/browser',
+      crypto: 'crypto-browserify',
+      stream: 'stream-browserify',
+      events: 'events',
+    },
+  },
+  optimizeDeps: {
+    include: ['buffer', 'process', 'crypto-browserify', 'stream-browserify', 'events', 'ed25519-hd-key', 'create-hmac'],
+    esbuildOptions: {
+      define: {
+        global: 'globalThis',
+      },
+    },
+  },
   build: {
     outDir: 'dist',
+    commonjsOptions: {
+      transformMixedEsModules: true,
+      requireReturnsDefault: 'auto',
+    },
     rollupOptions: {
       input: {
         popup: resolve(__dirname, 'src/popup.html'),

@@ -1,156 +1,297 @@
-import { ArrowLeft, Clock, Globe, Key, Shield, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import bs58 from 'bs58';
+import { AnimatePresence, motion } from 'framer-motion';
+import { AlertTriangle, ArrowLeft, Check, Copy, Key, Lock, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { deriveKeypairFromSeed, getDecryptedSeed } from '../utils/keyManager';
+import { getAllBurnerWallets, type BurnerWallet } from '../utils/storage';
+import { lockWallet } from '../utils/walletLock';
 
 const Settings = () => {
   const navigate = useNavigate();
-  const [timingObfuscation, setTimingObfuscation] = useState(true);
-  const [autoConnect, setAutoConnect] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [password, setPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [privateKey, setPrivateKey] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [activeWallet, setActiveWallet] = useState<BurnerWallet | null>(null);
+
+  // Load active wallet on mount
+  useEffect(() => {
+    const loadActiveWallet = async () => {
+      const wallets = await getAllBurnerWallets();
+      const active = wallets.find(w => w.isActive) || wallets[0] || null;
+      setActiveWallet(active);
+    };
+    loadActiveWallet();
+  }, []);
+
+  const handleLockWallet = async () => {
+    try {
+      await lockWallet();
+      navigate('/home');
+    } catch (error) {
+      console.error('[Veil] Error locking wallet:', error);
+    }
+  };
+
+  const handleExportPrivateKey = async () => {
+    if (!password) {
+      setPasswordError('Please enter your password');
+      return;
+    }
+
+    setIsVerifying(true);
+    setPasswordError('');
+
+    try {
+      // Verify password by decrypting seed
+      const seed = await getDecryptedSeed(password);
+      
+      if (!activeWallet) {
+        setPasswordError('No active wallet found');
+        setPassword('');
+        return;
+      }
+      
+      // Derive keypair for the active wallet (using its index)
+      const walletKeypair = deriveKeypairFromSeed(seed, activeWallet.index);
+      
+      // Verify the derived public key matches the stored address
+      const derivedPublicKey = walletKeypair.publicKey.toBase58();
+      if (derivedPublicKey !== activeWallet.fullAddress) {
+        console.error('[Veil] Public key mismatch:', {
+          derived: derivedPublicKey,
+          stored: activeWallet.fullAddress,
+          index: activeWallet.index
+        });
+        setPasswordError('Key derivation mismatch. Please try again.');
+        setPassword('');
+        return;
+      }
+      
+      // Export full secretKey in Base58 format (Phantom import format)
+      // Phantom expects the full 64-byte secretKey in Base58
+      // secretKey format: [32 bytes private key][32 bytes public key]
+      const secretKeyBytes = new Uint8Array(walletKeypair.secretKey);
+      const secretKeyBase58 = bs58.encode(secretKeyBytes);
+      
+      setPrivateKey(secretKeyBase58);
+      setPassword('');
+    } catch {
+      setPasswordError('Incorrect password. Please try again.');
+      setPassword('');
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const handleCopyPrivateKey = () => {
+    if (privateKey) {
+      navigator.clipboard.writeText(privateKey);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleCloseModal = () => {
+    setShowExportModal(false);
+    setPassword('');
+    setPasswordError('');
+    setPrivateKey(null);
+    setCopied(false);
+  };
 
   return (
-    <div className="h-full w-full bg-black text-white p-5 relative flex flex-col font-sans overflow-y-auto">
+    <div className="h-full w-full bg-black text-white relative flex flex-col font-sans overflow-hidden">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
-        <button onClick={() => navigate(-1)} className="p-2 rounded-xl hover:bg-white/10 transition-colors">
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-white/10">
+        <button 
+          onClick={() => navigate(-1)} 
+          className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+        >
           <ArrowLeft className="w-5 h-5 text-gray-400" />
         </button>
-        <h1 className="text-xl font-bold">Settings</h1>
+        <h1 className="text-lg font-bold">Settings</h1>
       </div>
 
-      <div className="space-y-6 flex-1">
-        {/* Privacy Settings */}
-        <div className="space-y-4">
-          <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest pl-1">Privacy</h3>
-
-          <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
-            <div className="p-4 flex justify-between items-center border-b border-white/5">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-500/20 rounded-lg text-blue-400">
-                  <Clock className="w-4 h-4" />
-                </div>
-                <div>
-                  <p className="font-medium text-sm">Timing Obfuscation</p>
-                  <p className="text-xs text-gray-500">Add random delays to migrations</p>
-                </div>
+      {/* Settings Options */}
+      <div className="flex-1 overflow-y-auto px-4 py-4">
+        <div className="space-y-2">
+          {/* Export Private Key */}
+          <button
+            onClick={() => setShowExportModal(true)}
+            className="w-full p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl flex items-center justify-between transition-all group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-yellow-500/20 rounded-lg">
+                <Key className="w-5 h-5 text-yellow-400" />
               </div>
-              <button 
-                onClick={() => setTimingObfuscation(!timingObfuscation)}
-                className={`h-5 w-9 rounded-full p-0.5 transition-colors ${timingObfuscation ? 'bg-green-500/20' : 'bg-gray-700'}`}
-              >
-                <div className={`h-4 w-4 rounded-full shadow-sm transition-all ${timingObfuscation ? 'bg-green-500 ml-auto' : 'bg-gray-500 ml-0'}`} />
-              </button>
-            </div>
-
-            <div className="p-4 flex justify-between items-center">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-purple-500/20 rounded-lg text-purple-400">
-                  <Shield className="w-4 h-4" />
-                </div>
-                <div>
-                  <p className="font-medium text-sm">Privacy Cash</p>
-                  <p className="text-xs text-gray-500">Migrate funds for unlinkability</p>
-                </div>
-              </div>
-              <button className="px-3 py-1 text-xs font-medium bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-colors">
-                Manage
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Connection Settings */}
-        <div className="space-y-4">
-          <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest pl-1">Connections</h3>
-
-          <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
-            <div className="p-4 flex justify-between items-center border-b border-white/5">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-cyan-500/20 rounded-lg text-cyan-400">
-                  <Globe className="w-4 h-4" />
-                </div>
-                <div>
-                  <p className="font-medium text-sm">Auto-Connect</p>
-                  <p className="text-xs text-gray-500">Connect automatically to trusted sites</p>
-                </div>
-              </div>
-              <button 
-                onClick={() => setAutoConnect(!autoConnect)}
-                className={`h-5 w-9 rounded-full p-0.5 transition-colors ${autoConnect ? 'bg-green-500/20' : 'bg-gray-700'}`}
-              >
-                <div className={`h-4 w-4 rounded-full shadow-sm transition-all ${autoConnect ? 'bg-green-500 ml-auto' : 'bg-gray-500 ml-0'}`} />
-              </button>
-            </div>
-
-            <div className="p-4 flex justify-between items-center">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-orange-500/20 rounded-lg text-orange-400">
-                  <Globe className="w-4 h-4" />
-                </div>
-                <div>
-                  <p className="font-medium text-sm">Connected Sites</p>
-                  <p className="text-xs text-gray-500">3 sites with active burners</p>
-                </div>
-              </div>
-              <button className="px-3 py-1 text-xs font-medium bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-colors">
-                View All
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Security */}
-        <div className="space-y-4">
-          <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest pl-1">Security</h3>
-
-          <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
-            <div className="p-4 flex items-center gap-3 hover:bg-white/5 cursor-pointer transition-colors border-b border-white/5">
-              <div className="p-2 bg-yellow-500/20 rounded-lg text-yellow-400">
-                <Key className="w-4 h-4" />
-              </div>
-              <div className="flex-1">
-                <p className="font-medium text-sm">Backup Seed Phrase</p>
-                <p className="text-xs text-gray-500">View your 12-word recovery phrase</p>
+              <div className="text-left">
+                <p className="font-semibold text-sm">Export Private Key</p>
+                <p className="text-xs text-gray-500">Reveal your active wallet private key</p>
               </div>
             </div>
+            <div className="text-gray-600 group-hover:text-gray-400 transition-colors">
+              <ArrowLeft className="w-4 h-4 rotate-180" />
+            </div>
+          </button>
 
-            <div className="p-4 flex items-center gap-3 hover:bg-white/5 cursor-pointer transition-colors text-red-400">
-              <Trash2 className="w-4 h-4" />
-              <span className="text-sm font-medium">Clear All Local Data</span>
+          {/* Lock Wallet */}
+          <button
+            onClick={handleLockWallet}
+            className="w-full p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl flex items-center justify-between transition-all group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-red-500/20 rounded-lg">
+                <Lock className="w-5 h-5 text-red-400" />
+              </div>
+              <div className="text-left">
+                <p className="font-semibold text-sm">Lock Wallet</p>
+                <p className="text-xs text-gray-500">Lock your wallet and require password to unlock</p>
+              </div>
             </div>
-          </div>
-        </div>
-
-        {/* Burner Management */}
-        <div className="space-y-4">
-          <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest pl-1">Burner Management</h3>
-
-          <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-            <div className="flex justify-between items-center mb-3">
-              <span className="text-sm text-gray-300">Active Burners</span>
-              <span className="text-sm font-bold text-white">3</span>
+            <div className="text-gray-600 group-hover:text-gray-400 transition-colors">
+              <ArrowLeft className="w-4 h-4 rotate-180" />
             </div>
-            <div className="flex justify-between items-center mb-3">
-              <span className="text-sm text-gray-300">Retired Burners</span>
-              <span className="text-sm font-bold text-gray-500">12</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-300">Total Derived</span>
-              <span className="text-sm font-bold text-gray-500">15</span>
-            </div>
-            <div className="mt-4 pt-3 border-t border-white/5">
-              <p className="text-xs text-gray-600">
-                Burners are deterministically derived from your master seed. Retired burners are never reused.
-              </p>
-            </div>
-          </div>
+          </button>
         </div>
       </div>
 
-      {/* Footer */}
-      <div className="mt-6 text-center pt-4 border-t border-white/5">
-        <p className="text-xs text-gray-700">Veil v0.1.0 (Alpha)</p>
-        <p className="text-xs text-gray-800 mt-1">Non-custodial • Privacy by default</p>
-      </div>
+      {/* Export Private Key Modal */}
+      <AnimatePresence>
+        {showExportModal && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={handleCloseModal}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
+            />
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="fixed bottom-0 left-0 right-0 bg-gray-900 rounded-t-2xl z-50 border-t border-white/10 max-h-[90vh] overflow-y-auto"
+            >
+              <div className="flex justify-center pt-3 pb-2">
+                <div className="w-10 h-1 bg-white/20 rounded-full" />
+              </div>
+
+              <div className="px-4 pb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-bold">Export Private Key</h2>
+                  <button
+                    onClick={handleCloseModal}
+                    className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
+                  >
+                    <X className="w-5 h-5 text-gray-400" />
+                  </button>
+                </div>
+
+                {!privateKey ? (
+                  <>
+                    {/* Warning */}
+                    <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-4">
+                      <div className="flex items-start gap-3">
+                        <AlertTriangle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold text-red-400 mb-1">Security Warning</p>
+                          <p className="text-xs text-red-300/80 leading-relaxed">
+                            Never share your private key with anyone. Anyone with access to your private key can control your wallet and steal your funds.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Password Input */}
+                    <div className="mb-4">
+                      <label className="block text-xs font-medium text-gray-400 mb-2">
+                        Enter your password to continue
+                      </label>
+                      <input
+                        type="password"
+                        value={password}
+                        onChange={(e) => {
+                          setPassword(e.target.value);
+                          setPasswordError('');
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !isVerifying) {
+                            handleExportPrivateKey();
+                          }
+                        }}
+                        placeholder="Enter password"
+                        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-sm text-white placeholder-gray-600 focus:outline-none focus:border-white/20 transition-colors"
+                        autoFocus
+                      />
+                      {passwordError && (
+                        <p className="text-xs text-red-400 mt-2">{passwordError}</p>
+                      )}
+                    </div>
+
+                    {/* Verify Button */}
+                    <button
+                      onClick={handleExportPrivateKey}
+                      disabled={!password || isVerifying}
+                      className={`w-full py-3.5 px-4 font-semibold rounded-xl transition-all ${
+                        password && !isVerifying
+                          ? 'bg-gradient-to-r from-red-600 to-red-500 text-white hover:from-red-500 hover:to-red-400 shadow-lg shadow-red-500/20'
+                          : 'bg-white/10 text-gray-500 cursor-not-allowed'
+                      }`}
+                    >
+                      {isVerifying ? 'Verifying...' : 'Continue'}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    {/* Private Key Display */}
+                    <div className="mb-4">
+                      <label className="block text-xs font-medium text-gray-400 mb-2">
+                        Your Private Key
+                      </label>
+                      <div className="px-4 py-3 bg-white/5 border border-white/10 rounded-xl">
+                        <p className="text-sm font-mono break-all text-white">
+                          {privateKey}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Copy Button */}
+                    <button
+                      onClick={handleCopyPrivateKey}
+                      className="w-full py-3 px-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl flex items-center justify-center gap-2 transition-all mb-3"
+                    >
+                      {copied ? (
+                        <>
+                          <Check className="w-4 h-4 text-green-400" />
+                          <span className="text-sm font-medium text-green-400">Copied!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-4 h-4 text-gray-400" />
+                          <span className="text-sm font-medium">Copy Private Key</span>
+                        </>
+                      )}
+                    </button>
+
+                    {/* Close Button */}
+                    <button
+                      onClick={handleCloseModal}
+                      className="w-full py-3 px-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-sm font-medium transition-all"
+                    >
+                      Close
+                    </button>
+                  </>
+                )}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
