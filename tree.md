@@ -12,6 +12,7 @@
   - Migrate funds button
   - Auto-generates first burner on unlock (from onboarding or session)
   - Sequential account naming (Account 1, Account 2, etc.)
+  - Auto-archives wallets with balance < 0.001 SOL when generating new burner
 
 - **`Onboarding.tsx`** - Wallet setup flow UI
   - Welcome screen
@@ -26,13 +27,21 @@
   - Export Private Key (password-gated, Base58 format, full 64-byte secretKey)
   - Lock Wallet functionality
   - Public key verification for exported keys
+  - Navigation to Archived Wallets page
   - Phantom/MetaMask inspired design
+
+- **`ArchivedWallets.tsx`** - Archived wallets management page
+  - Displays all archived wallets
+  - Shows wallet details (name, address, balance)
+  - Export private key functionality for archived wallets
+  - Empty state when no archived wallets exist
 
 ### Components (`src/components/`)
 - **`UnlockWallet.tsx`** - Password unlock screen UI
   - Password input
   - Error handling
   - Unlock button
+  - 300ms delay before unlock for better UX
 
 ### Entry Points
 - **`App.tsx`** - Main router setup
@@ -69,6 +78,8 @@
   - Connected sites management
   - Address formatting utilities
   - Sequential account number generation (Account 1, Account 2, etc.)
+  - Wallet archiving/unarchiving functions
+  - Get archived wallets function
   - Type definitions (BurnerWallet, ConnectedSite)
 
 - **`walletLock.ts`** - Session management
@@ -103,9 +114,9 @@
 
 ## 📊 Summary
 
-**UI Files (7):**
+**UI Files (8):**
 - `App.tsx`, `popup.html`, `scripts/popup.tsx`
-- `pages/Home.tsx`, `pages/Onboarding.tsx`, `pages/History.tsx`, `pages/Settings.tsx`
+- `pages/Home.tsx`, `pages/Onboarding.tsx`, `pages/History.tsx`, `pages/Settings.tsx`, `pages/ArchivedWallets.tsx`
 - `components/UnlockWallet.tsx`
 
 **Logic Files (6):**
@@ -131,13 +142,19 @@
    - `UnlockWallet.tsx` (UI) → `keyManager.ts` (decrypt seed) → `walletLock.ts` (create session) → `Home.tsx` (display)
 
 3. **Burner Generation Flow:**
-   - `Home.tsx` (UI) → `keyManager.ts` (derive keypair) → `storage.ts` (save burner with sequential name)
+   - `Home.tsx` (UI) → Check existing wallets → Archive wallets with balance < 0.001 SOL → `keyManager.ts` (derive keypair) → `storage.ts` (save burner with sequential name)
    - Auto-triggered on unlock if no burners exist
    - Uses password from state or sessionStorage (from onboarding)
+   - Automatically archives low-balance wallets before generating new one
 
 4. **Private Key Export Flow:**
-   - `Settings.tsx` (UI) → Password verification → `keyManager.ts` (derive keypair for active wallet) → Export full 64-byte secretKey in Base58 format
+   - `Settings.tsx` or `ArchivedWallets.tsx` (UI) → Password verification → `keyManager.ts` (derive keypair for selected wallet) → Export full 64-byte secretKey in Base58 format
    - Verifies derived public key matches stored address before export
+   - Works for both active and archived wallets
 
-4. **Session Management:**
+5. **Wallet Archiving Flow:**
+   - `Home.tsx` (UI) → Check wallet balances before generating new burner → `storage.ts` (archive wallets with balance < 0.001 SOL) → Generate new burner
+   - Archived wallets accessible via `ArchivedWallets.tsx` page
+
+6. **Session Management:**
    - `walletLock.ts` tracks session state → `Home.tsx` checks periodically → Auto-locks after 15 minutes

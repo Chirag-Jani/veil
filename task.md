@@ -26,6 +26,7 @@
 - [x] Settings page redesign (Phantom/MetaMask inspired)
 - [x] Export Private Key feature (password-gated, Base58 format)
 - [x] Lock Wallet functionality
+- [x] Archived Wallets page (dedicated panel for archived wallet management)
 - [x] Updated messaging: "dApps never see your main wallet"
 
 ### UI/UX Refinements ✅
@@ -49,6 +50,9 @@
 - [x] Auto-generate first burner wallet on unlock
 - [x] Sequential account naming (Account 1, Account 2, etc.)
 - [x] Burner indexing for deterministic recovery
+- [x] Wallet archiving system (auto-archive wallets with balance < 0.001 SOL)
+- [x] Archived wallets management page
+- [x] Private key export from archived wallets
 - [ ] Implement site-bound burner wallet generation
 - [ ] Session-scoped burner lifecycle management
 - [ ] Balance-based burner reuse logic:
