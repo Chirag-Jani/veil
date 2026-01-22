@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import UnlockWallet from '../components/UnlockWallet';
 import { generateBurnerKeypair, getDecryptedSeed, hasWallet } from '../utils/keyManager';
-import { formatAddress, getAddressFromKeypair, getAllBurnerWallets, getNextAccountNumber, storeBurnerWallet, type BurnerWallet } from '../utils/storage';
+import { archiveBurnerWallet, formatAddress, getAddressFromKeypair, getAllBurnerWallets, getNextAccountNumber, storeBurnerWallet, type BurnerWallet } from '../utils/storage';
 import { extendSession, isSessionValid, isWalletLocked } from '../utils/walletLock';
 
 const Home = () => {
@@ -53,6 +53,17 @@ const Home = () => {
 
     setIsGenerating(true);
     try {
+      // Check existing active wallets and archive those with balance < 0.001 SOL
+      const existingWallets = await getAllBurnerWallets();
+      const activeWallets = existingWallets.filter(w => w.isActive && !w.archived);
+      
+      for (const wallet of activeWallets) {
+        if (wallet.balance < 0.001) {
+          // Archive wallet with balance < 0.001 SOL
+          await archiveBurnerWallet(wallet.index);
+        }
+      }
+
       const seed = await getDecryptedSeed(currentPassword);
       const { keypair, index } = await generateBurnerKeypair(seed);
       const address = getAddressFromKeypair(keypair);

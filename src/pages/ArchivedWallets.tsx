@@ -1,52 +1,38 @@
 import bs58 from 'bs58';
 import { AnimatePresence, motion } from 'framer-motion';
-import { AlertTriangle, Archive, ArrowLeft, Check, Copy, Key, Lock, X } from 'lucide-react';
+import { AlertTriangle, Archive, ArrowLeft, Check, Copy, Key, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { deriveKeypairFromSeed, getDecryptedSeed } from '../utils/keyManager';
-import type { BurnerWallet } from '../utils/storage';
-import { getAllBurnerWallets, getArchivedBurnerWallets } from '../utils/storage';
-import { lockWallet } from '../utils/walletLock';
+import { getArchivedBurnerWallets, type BurnerWallet } from '../utils/storage';
 
-const Settings = () => {
+const ArchivedWallets = () => {
   const navigate = useNavigate();
+  const [archivedWallets, setArchivedWallets] = useState<BurnerWallet[]>([]);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [selectedWallet, setSelectedWallet] = useState<BurnerWallet | null>(null);
   const [password, setPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [privateKey, setPrivateKey] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [activeWallet, setActiveWallet] = useState<BurnerWallet | null>(null);
-  const [archivedWallets, setArchivedWallets] = useState<BurnerWallet[]>([]);
-  const [selectedWalletForExport, setSelectedWalletForExport] = useState<BurnerWallet | null>(null);
 
-  // Load active wallet and archived wallets count on mount
   useEffect(() => {
-    const loadWallets = async () => {
-      const wallets = await getAllBurnerWallets();
-      const active = wallets.find(w => w.isActive) || wallets[0] || null;
-      setActiveWallet(active);
-      
+    const loadArchivedWallets = async () => {
       const archived = await getArchivedBurnerWallets();
       setArchivedWallets(archived);
     };
-    loadWallets();
+    loadArchivedWallets();
   }, []);
 
-  const handleLockWallet = async () => {
-    try {
-      await lockWallet();
-      navigate('/home');
-    } catch (error) {
-      console.error('[Veil] Error locking wallet:', error);
-    }
-  };
-
-  const handleExportPrivateKey = async (wallet?: BurnerWallet) => {
-    const targetWallet = wallet || activeWallet;
-    
+  const handleExportPrivateKey = async () => {
     if (!password) {
       setPasswordError('Please enter your password');
+      return;
+    }
+
+    if (!selectedWallet) {
+      setPasswordError('No wallet selected');
       return;
     }
 
@@ -54,34 +40,21 @@ const Settings = () => {
     setPasswordError('');
 
     try {
-      // Verify password by decrypting seed
       const seed = await getDecryptedSeed(password);
+      const walletKeypair = deriveKeypairFromSeed(seed, selectedWallet.index);
       
-      if (!targetWallet) {
-        setPasswordError('No wallet found');
-        setPassword('');
-        return;
-      }
-      
-      // Derive keypair for the target wallet (using its index)
-      const walletKeypair = deriveKeypairFromSeed(seed, targetWallet.index);
-      
-      // Verify the derived public key matches the stored address
       const derivedPublicKey = walletKeypair.publicKey.toBase58();
-      if (derivedPublicKey !== targetWallet.fullAddress) {
+      if (derivedPublicKey !== selectedWallet.fullAddress) {
         console.error('[Veil] Public key mismatch:', {
           derived: derivedPublicKey,
-          stored: targetWallet.fullAddress,
-          index: targetWallet.index
+          stored: selectedWallet.fullAddress,
+          index: selectedWallet.index
         });
         setPasswordError('Key derivation mismatch. Please try again.');
         setPassword('');
         return;
       }
       
-      // Export full secretKey in Base58 format (Phantom import format)
-      // Phantom expects the full 64-byte secretKey in Base58
-      // secretKey format: [32 bytes private key][32 bytes public key]
       const secretKeyBytes = new Uint8Array(walletKeypair.secretKey);
       const secretKeyBase58 = bs58.encode(secretKeyBytes);
       
@@ -105,13 +78,17 @@ const Settings = () => {
 
   const handleCloseModal = () => {
     setShowExportModal(false);
-    setSelectedWalletForExport(null);
+    setSelectedWallet(null);
     setPassword('');
     setPasswordError('');
     setPrivateKey(null);
     setCopied(false);
   };
 
+  const handleExportWallet = (wallet: BurnerWallet) => {
+    setSelectedWallet(wallet);
+    setShowExportModal(true);
+  };
 
   return (
     <div className="h-full w-full bg-black text-white relative flex flex-col font-sans overflow-hidden">
@@ -123,79 +100,60 @@ const Settings = () => {
         >
           <ArrowLeft className="w-5 h-5 text-gray-400" />
         </button>
-        <h1 className="text-lg font-bold">Settings</h1>
+        <div className="flex items-center gap-2">
+          <Archive className="w-5 h-5 text-gray-400" />
+          <h1 className="text-lg font-bold">Archived Wallets</h1>
+        </div>
       </div>
 
-      {/* Settings Options */}
+      {/* Archived Wallets List */}
       <div className="flex-1 overflow-y-auto px-4 py-4">
-        <div className="space-y-2">
-          {/* Export Private Key */}
-          <button
-            onClick={() => {
-              setSelectedWalletForExport(null); // Clear any selected archived wallet
-              setShowExportModal(true);
-            }}
-            className="w-full p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl flex items-center justify-between transition-all group"
-          >
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-yellow-500/20 rounded-lg">
-                <Key className="w-5 h-5 text-yellow-400" />
+        {archivedWallets.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-center">
+            <Archive className="w-12 h-12 text-gray-600 mb-4" />
+            <p className="text-gray-400 text-sm mb-1">No archived wallets</p>
+            <p className="text-gray-600 text-xs">Archived wallets will appear here</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {archivedWallets.map((wallet) => (
+              <div
+                key={wallet.id}
+                className="p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors"
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="text-sm font-semibold text-white">{wallet.site}</p>
+                      <span className="px-2 py-0.5 text-[10px] bg-gray-500/20 text-gray-400 rounded-full font-medium">
+                        ARCHIVED
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500 font-mono mt-1">
+                      {wallet.address}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-semibold text-white">{wallet.balance.toFixed(4)} SOL</p>
+                    <p className="text-xs text-gray-500">≈ ${(wallet.balance * 145).toFixed(2)}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleExportWallet(wallet)}
+                  className="w-full py-2.5 px-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg flex items-center justify-center gap-2 transition-all text-xs font-medium"
+                >
+                  <Key className="w-4 h-4 text-gray-400" />
+                  <span>Export Private Key</span>
+                </button>
               </div>
-              <div className="text-left">
-                <p className="font-semibold text-sm">Export Private Key</p>
-                <p className="text-xs text-gray-500">Reveal your active wallet private key</p>
-              </div>
-            </div>
-            <div className="text-gray-600 group-hover:text-gray-400 transition-colors">
-              <ArrowLeft className="w-4 h-4 rotate-180" />
-            </div>
-          </button>
-
-          {/* Lock Wallet */}
-          <button
-            onClick={handleLockWallet}
-            className="w-full p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl flex items-center justify-between transition-all group"
-          >
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-red-500/20 rounded-lg">
-                <Lock className="w-5 h-5 text-red-400" />
-              </div>
-              <div className="text-left">
-                <p className="font-semibold text-sm">Lock Wallet</p>
-                <p className="text-xs text-gray-500">Lock your wallet and require password to unlock</p>
-              </div>
-            </div>
-            <div className="text-gray-600 group-hover:text-gray-400 transition-colors">
-              <ArrowLeft className="w-4 h-4 rotate-180" />
-            </div>
-          </button>
-
-          {/* Archived Wallets */}
-          <button
-            onClick={() => navigate('/archived')}
-            className="w-full p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl flex items-center justify-between transition-all group"
-          >
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-gray-500/20 rounded-lg">
-                <Archive className="w-5 h-5 text-gray-400" />
-              </div>
-              <div className="text-left">
-                <p className="font-semibold text-sm">Archived Wallets</p>
-                <p className="text-xs text-gray-500">
-                  {archivedWallets.length} {archivedWallets.length === 1 ? 'wallet' : 'wallets'} archived
-                </p>
-              </div>
-            </div>
-            <div className="text-gray-600 group-hover:text-gray-400 transition-colors">
-              <ArrowLeft className="w-4 h-4 rotate-180" />
-            </div>
-          </button>
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Export Private Key Modal */}
       <AnimatePresence>
-        {showExportModal && (
+        {showExportModal && selectedWallet && (
           <>
             <motion.div
               initial={{ opacity: 0 }}
@@ -217,14 +175,10 @@ const Settings = () => {
 
               <div className="px-4 pb-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-bold">
-                    Export Private Key
-                    {selectedWalletForExport && (
-                      <span className="text-xs text-gray-500 font-normal ml-2">
-                        ({selectedWalletForExport.site})
-                      </span>
-                    )}
-                  </h2>
+                  <div>
+                    <h2 className="text-lg font-bold">Export Private Key</h2>
+                    <p className="text-xs text-gray-500 mt-1">{selectedWallet.site}</p>
+                  </div>
                   <button
                     onClick={handleCloseModal}
                     className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
@@ -276,7 +230,7 @@ const Settings = () => {
 
                     {/* Verify Button */}
                     <button
-                      onClick={() => handleExportPrivateKey(selectedWalletForExport || undefined)}
+                      onClick={handleExportPrivateKey}
                       disabled={!password || isVerifying}
                       className={`w-full py-3.5 px-4 font-semibold rounded-xl transition-all ${
                         password && !isVerifying
@@ -337,4 +291,4 @@ const Settings = () => {
   );
 };
 
-export default Settings;
+export default ArchivedWallets;

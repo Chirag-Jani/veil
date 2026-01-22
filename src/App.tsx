@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
 
+import ArchivedWallets from './pages/ArchivedWallets';
 import History from './pages/History';
 import Home from './pages/Home';
 import Onboarding from './pages/Onboarding';
@@ -45,6 +46,7 @@ const App = () => {
           <Route path="/home" element={<Home />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/history" element={<History />} />
+          <Route path="/archived" element={<ArchivedWallets />} />
         </Routes>
       </div>
     </HashRouter>

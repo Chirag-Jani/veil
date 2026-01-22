@@ -384,12 +384,6 @@ const Onboarding = () => {
                 ← Back
               </button>
             </div>
-
-            <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3">
-              <p className="text-xs text-blue-400/80 text-center">
-                🔒 Your password encrypts your seed phrase locally. We never store it.
-              </p>
-            </div>
           </motion.div>
         )}
       </AnimatePresence>

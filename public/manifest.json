@@ -3,6 +3,11 @@
   "name": "Veil",
   "version": "0.1.0",
   "description": "Non-custodial privacy layer for Solana payments.",
+  "icons": {
+    "16": "veil.png",
+    "48": "veil.png",
+    "128": "veil.png"
+  },
   "permissions": [
     "storage",
     "activeTab"
@@ -10,9 +15,9 @@
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
-      "16": "/veil.png",
-      "48": "/veil.png",
-      "128": "/veil.png"
+      "16": "veil.png",
+      "48": "veil.png",
+      "128": "veil.png"
     }
   },
   "background": {

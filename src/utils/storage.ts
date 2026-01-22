@@ -12,6 +12,7 @@ export interface BurnerWallet {
   site: string;
   isActive: boolean;
   index: number; // HD wallet derivation index
+  archived?: boolean; // Whether the wallet is archived
 }
 
 export interface ConnectedSite {
@@ -49,7 +50,7 @@ export async function storeBurnerWallet(wallet: BurnerWallet): Promise<void> {
 }
 
 /**
- * Get all burner wallets
+ * Get all burner wallets (excluding archived)
  */
 export async function getAllBurnerWallets(): Promise<BurnerWallet[]> {
   const allData = await chrome.storage.local.get(null);
@@ -57,7 +58,11 @@ export async function getAllBurnerWallets(): Promise<BurnerWallet[]> {
 
   for (const [key, value] of Object.entries(allData)) {
     if (key.startsWith('veil:burner:')) {
-      wallets.push(value as BurnerWallet);
+      const wallet = value as BurnerWallet;
+      // Only include non-archived wallets
+      if (!wallet.archived) {
+        wallets.push(wallet);
+      }
     }
   }
 
@@ -65,10 +70,66 @@ export async function getAllBurnerWallets(): Promise<BurnerWallet[]> {
 }
 
 /**
+ * Get all archived burner wallets
+ */
+export async function getArchivedBurnerWallets(): Promise<BurnerWallet[]> {
+  const allData = await chrome.storage.local.get(null);
+  const wallets: BurnerWallet[] = [];
+
+  for (const [key, value] of Object.entries(allData)) {
+    if (key.startsWith('veil:burner:')) {
+      const wallet = value as BurnerWallet;
+      // Only include archived wallets
+      if (wallet.archived) {
+        wallets.push(wallet);
+      }
+    }
+  }
+
+  return wallets.sort((a, b) => b.id - a.id); // Most recent first
+}
+
+/**
+ * Archive a burner wallet
+ */
+export async function archiveBurnerWallet(walletIndex: number): Promise<void> {
+  const key = `veil:burner:${walletIndex}`;
+  const result = await chrome.storage.local.get(key);
+  if (result[key]) {
+    const wallet = result[key] as BurnerWallet;
+    wallet.archived = true;
+    wallet.isActive = false; // Deactivate when archiving
+    await chrome.storage.local.set({ [key]: wallet });
+  }
+}
+
+/**
+ * Unarchive a burner wallet
+ */
+export async function unarchiveBurnerWallet(walletIndex: number): Promise<void> {
+  const key = `veil:burner:${walletIndex}`;
+  const result = await chrome.storage.local.get(key);
+  if (result[key]) {
+    const wallet = result[key] as BurnerWallet;
+    wallet.archived = false;
+    await chrome.storage.local.set({ [key]: wallet });
+  }
+}
+
+/**
  * Get the next account number for naming (Account 1, Account 2, etc.)
+ * Includes archived wallets in the count
  */
 export async function getNextAccountNumber(): Promise<number> {
-  const wallets = await getAllBurnerWallets();
+  const allData = await chrome.storage.local.get(null);
+  const wallets: BurnerWallet[] = [];
+
+  // Get all wallets (including archived) for account numbering
+  for (const [key, value] of Object.entries(allData)) {
+    if (key.startsWith('veil:burner:')) {
+      wallets.push(value as BurnerWallet);
+    }
+  }
   
   // Extract account numbers from existing wallets
   const accountNumbers = wallets
