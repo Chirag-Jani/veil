@@ -5,13 +5,13 @@
 ### Pages (`src/pages/`)
 - **`Home.tsx`** - Main wallet dashboard UI
   - Wallet balance display
-  - Private balance display (when available)
-  - Privacy score display (always visible)
+  - Private balance display (when Privacy Cash mode enabled)
+  - Privacy score display (deferred for later)
   - Burner wallet list modal
   - Connected sites modal
   - Address copy popup
-  - Deposit to Privacy button (when balance > 0)
-  - Withdraw from Privacy button (when private balance > 0)
+  - Deposit to Privacy button (when balance > 0, fully tested ✅)
+  - Withdraw from Privacy button (when private balance > 0, fully tested ✅)
   - Transfer/Sweep button (when balance > 0)
   - Generate new burner button
   - Auto-generates first burner on unlock (from onboarding or session)
@@ -56,20 +56,21 @@
   - Unlock button
   - 300ms delay before unlock for better UX
 
-- **`DepositModal.tsx`** - Deposit funds to Privacy Cash modal (fully functional)
+- **`DepositModal.tsx`** - Deposit funds to Privacy Cash modal (fully functional and tested ✅)
   - Amount input with MAX button
   - Available balance display
   - Validation and error handling
   - Loading states
   - Connected to PrivacyCash service
 
-- **`WithdrawModal.tsx`** - Withdraw funds from Privacy Cash modal (fully functional)
+- **`WithdrawModal.tsx`** - Withdraw funds from Privacy Cash modal (fully functional and tested ✅)
   - Amount input with MAX button
   - Private balance display
   - Recipient selection (active wallet or custom address)
   - Address copy functionality
   - Validation and error handling
   - Loading states
+  - Automatic retry logic for blockhash expiration errors
 
 ### Entry Points
 - **`App.tsx`** - Main router setup
@@ -228,12 +229,13 @@
 6. **Session Management:**
    - `walletLock.ts` tracks session state → `Home.tsx` checks periodically → Auto-locks after 15 minutes
 
-7. **Privacy Cash Integration (In Progress):**
+7. **Privacy Cash Integration (Complete ✅):**
    - Foundation utilities created (storage adapter, RPC manager, signer factory)
    - Circuit files copied to `public/circuit2/`
    - UI components ready (DepositModal, WithdrawModal)
-   - Withdraw functionality fully integrated with real Privacy Cash service
-   - Deposit functionality UI ready (service integration pending)
+   - Withdraw functionality fully integrated and tested with real Privacy Cash service
+   - Deposit functionality fully integrated and tested with real Privacy Cash service
+   - Blockhash expiration retry logic implemented for withdraw operations
 
 8. **Balance Monitoring:**
    - Background service worker monitors all burner wallets for incoming SOL
@@ -249,8 +251,8 @@
    - Background worker handles balance check requests
 
 10. **Fund Management:**
-    - Deposit to Privacy Cash (fully integrated)
-    - Withdraw from Privacy Cash (fully integrated)
+    - Deposit to Privacy Cash (fully integrated and tested ✅)
+    - Withdraw from Privacy Cash (fully integrated and tested ✅, includes blockhash retry logic)
     - Transfer/Sweep between wallets (fully functional)
     - Privacy score calculation and display
     - All operations update balances in real-time

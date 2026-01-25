@@ -123,12 +123,13 @@
 - [x] Create DepositModal component (UI ready)
 - [x] Create WithdrawModal component (UI ready, fully functional)
 - [x] Private balance display on Home page (real data from Privacy Cash)
-- [x] Withdrawal flow from Privacy Cash to fresh wallet (fully integrated)
+- [x] Withdrawal flow from Privacy Cash to fresh wallet (fully integrated and tested ✅)
 - [x] Circuit file path handling via chrome.runtime.getURL
 - [x] Automatic service initialization on wallet unlock (only when Privacy Cash mode enabled)
-- [x] Manual deposit flow: Burner → Privacy Cash (fully integrated)
+- [x] Manual deposit flow: Burner → Privacy Cash (fully integrated and tested ✅)
 - [x] Transaction history tracking and display
 - [x] Error handling improvements
+- [x] Blockhash expiration retry logic for withdraw operations (up to 3 retries)
 - [x] Configurable balance monitoring
 - [x] Privacy Cash mode toggle in Settings (default: disabled, normal wallet mode)
   - When disabled: Shows regular SOL balance, no Privacy Cash features

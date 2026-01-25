@@ -90,6 +90,7 @@ class PrivacyCashService {
   deposit(lamports: number): Promise<DepositResult>
   withdraw(lamports: number, recipient?: string): Promise<WithdrawResult>
   // recipient: if not provided, defaults to active wallet address
+  // Includes automatic retry logic for blockhash expiration errors (up to 3 retries)
   getPrivateBalance(): Promise<number>
   getPrivateBalanceSPL(mintAddress: string): Promise<number>
   clearCache(): Promise<void>
@@ -138,10 +139,10 @@ public/circuit2/
 5. ✅ **Copy circuit files** to public directory
 6. ✅ **Create PrivacyCash service** - main integration layer
 7. ✅ **Update Home page** - private balance display and withdraw functionality
-8. ✅ **Add UI components** - WithdrawModal (fully functional), DepositModal (UI ready)
-9. ✅ **Add error handling** - RPC retry logic, error handling in service layer
-10. ⚠️ **Wire up DepositModal** - Connect DepositModal to PrivacyCash service (UI exists, needs integration)
-11. ⚠️ **Testing** - Test with small amounts on devnet/mainnet
+8. ✅ **Add UI components** - WithdrawModal (fully functional), DepositModal (fully functional)
+9. ✅ **Add error handling** - RPC retry logic, error handling in service layer, blockhash expiration retry
+10. ✅ **Wire up DepositModal** - DepositModal fully connected to PrivacyCash service
+11. ✅ **Testing** - Deposit and withdraw tested and working on mainnet
 
 ## Key Considerations
 
@@ -155,7 +156,7 @@ public/circuit2/
 - **Insufficient balance:** Show clear error message
 - **Transaction failures:** Show user-friendly error message
 - **Storage errors:** Fallback to in-memory cache
-- ⚠️ **To Revisit:** Finalize error recovery strategy and user notification approach
+- **Blockhash expiration:** Automatic retry logic for withdraw operations (up to 3 retries with progressive delays) to handle relayer blockhash expiration during ZK proof generation
 
 ### Performance
 - ⚠️ **To Revisit:** Private balance caching strategy - cache in extension storage vs always fetch fresh (SDK already caches UTXOs)
@@ -197,15 +198,22 @@ public/circuit2/
 - Signer factory for transaction signing
 - Circuit files setup (using chrome.runtime.getURL)
 - PrivacyCash service layer (deposit, withdraw, getPrivateBalance)
-- Withdraw functionality (fully integrated)
+- Withdraw functionality (fully integrated and tested ✅)
 - Private balance display (real-time from Privacy Cash)
 - Automatic service initialization
+- Blockhash expiration retry logic for withdraw operations
 
 ### ✅ Fully Integrated
 - **Deposit functionality:** DepositModal fully connected to PrivacyCash service
   - Service `deposit()` method implemented and working
   - DepositModal wired up in Home.tsx
   - Balance updates after successful deposit
+  - Full error handling implemented
+- **Withdraw functionality:** WithdrawModal fully connected to PrivacyCash service
+  - Service `withdraw()` method implemented and tested
+  - WithdrawModal wired up in Home.tsx
+  - Balance updates after successful withdraw
+  - Automatic retry logic for blockhash expiration errors
   - Full error handling implemented
 
 ### ✅ Completed Enhancements

@@ -64,8 +64,8 @@ Each burner wallet is:
 - **Privacy Cash Integration (Optional):** 
   - **Toggle in Settings:** Privacy Cash mode can be enabled/disabled via Settings (default: disabled, normal wallet mode)
   - **When Enabled:**
-    - **Deposit:** Move funds from burner wallets to Privacy Cash for unlinkable on-chain privacy
-    - **Withdraw:** Move funds from Privacy Cash back to any wallet address
+    - **Deposit:** Move funds from burner wallets to Privacy Cash for unlinkable on-chain privacy (fully tested ✅)
+    - **Withdraw:** Move funds from Privacy Cash back to any wallet address (fully tested ✅, includes automatic retry for blockhash expiration)
     - **Private Balance:** Display of private balance from Privacy Cash UTXOs
   - **When Disabled (Default):** Normal wallet mode - shows regular SOL balance, no Privacy Cash features
 - **Transfer:** Transfer SOL between wallets with improved error handling and confirmation
@@ -133,7 +133,7 @@ Each burner wallet is:
 - **Crypto:** BIP39, Ed25519, HD wallet derivation
 - **Blockchain:** Solana Web3.js
 - **Extension:** Chrome Manifest V3, Service Workers
-- **Privacy:** Privacy Cash SDK integration (Deposit & Withdraw fully functional)
+- **Privacy:** Privacy Cash SDK integration (Deposit & Withdraw fully functional and tested ✅)
 - **Monitoring:** Background balance monitoring service (configurable interval)
 - **History:** Complete transaction history tracking and display with modern, compact UI
 - **Error Handling:** Centralized error handler with user-friendly messages

@@ -366,6 +366,7 @@ class PrivacyCashService {
    * Get private SPL token balance
    * Note: SPL token support requires additional implementation
    */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async getPrivateBalanceSPL(_mintAddress: string): Promise<number> {
     // TODO: Implement SPL token balance fetching
     console.warn("[PrivacyCash] SPL token balance not yet implemented");

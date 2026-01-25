@@ -3,12 +3,22 @@
 ## 🔴 High Priority - Core Functionality
 
 ### 1. Deposit Functionality Integration ✅
-**Status:** Fully integrated and working
+**Status:** Fully integrated, tested, and working
 - [x] Wire up `DepositModal` to `privacyCashService.deposit()`
 - [x] Add deposit handler to `Home.tsx`
 - [x] Update wallet balance after successful deposit
 - [x] Refresh private balance after deposit
 - [x] Full error handling implemented
+- [x] Tested on mainnet ✅
+
+### 1a. Withdraw Functionality Integration ✅
+**Status:** Fully integrated, tested, and working
+- [x] Wire up `WithdrawModal` to `privacyCashService.withdraw()`
+- [x] Add withdraw handler to `Home.tsx`
+- [x] Update private balance after successful withdraw
+- [x] Blockhash expiration retry logic (up to 3 retries with progressive delays)
+- [x] Full error handling implemented
+- [x] Tested on mainnet ✅
 
 ### 2. dApp Provider Integration (window.solana)
 **Status:** Not started
@@ -195,23 +205,24 @@
 
 ## ✅ Recently Completed
 
-1. ✅ **Wired up DepositModal** - Deposit functionality fully integrated
-2. ✅ **Created TransferModal** - Transfer/Sweep functionality implemented
-3. ✅ **Created PrivacyScoreDisplay** - Privacy score calculation and display
-4. ✅ **Transaction History System** - Full tracking and UI with filters
-5. ✅ **Error Handling System** - Centralized error handler with user-friendly messages
-6. ✅ **Configurable Balance Monitoring** - Environment variable configuration
-7. ✅ **Code Quality Fixes** - ESLint config, React optimization, build fixes
-8. ✅ **Updated all documentation** - All docs reflect current implementation status
+1. ✅ **Wired up DepositModal** - Deposit functionality fully integrated and tested
+2. ✅ **Wired up WithdrawModal** - Withdraw functionality fully integrated and tested with blockhash retry logic
+3. ✅ **Created TransferModal** - Transfer/Sweep functionality implemented
+4. ✅ **Created PrivacyScoreDisplay** - Privacy score calculation and display
+5. ✅ **Transaction History System** - Full tracking and UI with filters
+6. ✅ **Error Handling System** - Centralized error handler with user-friendly messages
+7. ✅ **Configurable Balance Monitoring** - Environment variable configuration
+8. ✅ **Code Quality Fixes** - ESLint config, React optimization, build fixes
+9. ✅ **Updated all documentation** - All docs reflect current implementation status
 
 ---
 
 ## 🚀 Next Steps (Recommended Order)
 
 1. ✅ **Wire up DepositModal** - Complete the Privacy Cash integration (DONE)
-2. ✅ **Transaction history** - User experience improvement (DONE)
-3. ✅ **Error handling** - Improved user feedback (DONE)
-4. **Implement window.solana provider** - Enable dApp connections (HIGH PRIORITY)
-5. **Site-bound burner system** - Core privacy feature (HIGH PRIORITY)
-6. **Testing** - Ensure reliability before mainnet (MEDIUM PRIORITY)
+2. ✅ **Wire up WithdrawModal** - Complete the Privacy Cash integration (DONE)
+3. ✅ **Transaction history** - User experience improvement (DONE)
+4. ✅ **Error handling** - Improved user feedback (DONE)
+5. **Implement window.solana provider** - Enable dApp connections (HIGH PRIORITY)
+6. **Site-bound burner system** - Core privacy feature (HIGH PRIORITY)
 7. **Add error toast notifications** - Better user feedback (QUICK WIN)
