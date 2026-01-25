@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowDown, Loader2, Shield, X } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { getErrorMessage } from '../utils/errorHandler';
 
 interface DepositModalProps {
@@ -14,6 +14,15 @@ const DepositModal = ({ isOpen, onClose, onDeposit, availableBalance }: DepositM
   const [amount, setAmount] = useState<string>('');
   const [isDepositing, setIsDepositing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Reset state when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setAmount('');
+      setIsDepositing(false);
+      setError(null);
+    }
+  }, [isOpen]);
 
   const handleClose = () => {
     if (!isDepositing) {

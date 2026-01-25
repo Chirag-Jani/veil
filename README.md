@@ -68,7 +68,9 @@ Each burner wallet is:
     - **Withdraw:** Move funds from Privacy Cash back to any wallet address
     - **Private Balance:** Display of private balance from Privacy Cash UTXOs
   - **When Disabled (Default):** Normal wallet mode - shows regular SOL balance, no Privacy Cash features
-- **Transfer/Sweep:** Transfer SOL between wallets or sweep all funds to another address
+- **Transfer:** Transfer SOL between wallets with improved error handling and confirmation
+- **Real-time Price:** Dynamic SOL/USD price fetching from CoinGecko API
+- **Modern UI:** Compact, modern transaction history with detailed transaction views
 - No forced mixing — user-controlled flow.
 
 ---
@@ -133,8 +135,9 @@ Each burner wallet is:
 - **Extension:** Chrome Manifest V3, Service Workers
 - **Privacy:** Privacy Cash SDK integration (Deposit & Withdraw fully functional)
 - **Monitoring:** Background balance monitoring service (configurable interval)
-- **History:** Complete transaction history tracking and display
+- **History:** Complete transaction history tracking and display with modern, compact UI
 - **Error Handling:** Centralized error handler with user-friendly messages
+- **UI/UX:** Modern, compact design with Solana branding and real-time price updates
 
 ## Configuration
 

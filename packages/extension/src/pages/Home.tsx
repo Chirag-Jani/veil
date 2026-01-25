@@ -47,7 +47,9 @@ import {
   getAddressFromKeypair,
   getAllBurnerWallets,
   getNextAccountNumber,
+  getPrivateBalance as getStoredPrivateBalance,
   storeBurnerWallet,
+  storePrivateBalance,
   type BurnerWallet,
 } from "../utils/storage";
 import {
@@ -80,6 +82,8 @@ const Home = () => {
   const [comingSoonFeature, setComingSoonFeature] =
     useState<string>("This feature");
   const [privateBalance, setPrivateBalance] = useState<number>(0);
+  const [isRefreshingPrivateBalance, setIsRefreshingPrivateBalance] =
+    useState(false);
   const [password, setPassword] = useState(""); // Store password in memory during session
   const [privacyCashMode, setPrivacyCashMode] = useState<boolean>(false);
   const [solPrice, setSolPrice] = useState<number | null>(null); // SOL price in USD
@@ -113,6 +117,7 @@ const Home = () => {
         // Password not available - gracefully lock wallet and show unlock screen
         setIsLocked(true);
         setPassword("");
+        sessionStorage.removeItem("veil:session_password");
         return;
       }
 
@@ -164,10 +169,12 @@ const Home = () => {
           // Password-related errors - lock wallet
           setIsLocked(true);
           setPassword("");
+          sessionStorage.removeItem("veil:session_password");
         } else {
           // Other errors - also lock wallet for security
           setIsLocked(true);
           setPassword("");
+          sessionStorage.removeItem("veil:session_password");
         }
       } finally {
         setIsGenerating(false);
@@ -197,6 +204,12 @@ const Home = () => {
       setPrivacyCashMode(privacyCashEnabled);
 
       if (!locked) {
+        // Restore password from sessionStorage if available
+        const sessionPassword = sessionStorage.getItem("veil:session_password");
+        if (sessionPassword && !password) {
+          setPassword(sessionPassword);
+        }
+
         await loadWallets();
 
         // Auto-generate first burner if none exist and wallet is unlocked
@@ -204,7 +217,7 @@ const Home = () => {
         if (wallets.length === 0 && !isGenerating) {
           // Try to get password from state or sessionStorage
           const currentPassword =
-            password || sessionStorage.getItem("veil:temp_password");
+            password || sessionStorage.getItem("veil:session_password") || sessionStorage.getItem("veil:temp_password");
           if (currentPassword) {
             if (!password) {
               setPassword(currentPassword); // Store in state
@@ -214,14 +227,19 @@ const Home = () => {
           } else {
             // No password available - lock wallet gracefully
             setIsLocked(true);
+            sessionStorage.removeItem("veil:session_password");
           }
         }
+      } else {
+        // Wallet is locked - clear session password
+        sessionStorage.removeItem("veil:session_password");
       }
     } catch (error) {
       // Handle any unexpected errors gracefully
       console.error("[Veil] Error checking wallet state:", error);
       setIsLocked(true);
       setPassword("");
+      sessionStorage.removeItem("veil:session_password");
       setIsLoading(false);
     }
   }, [navigate, loadWallets, isGenerating, password, generateNewBurner]);
@@ -239,6 +257,7 @@ const Home = () => {
         if (!valid) {
           setIsLocked(true);
           setPassword(""); // Clear password from memory
+          sessionStorage.removeItem("veil:session_password"); // Clear session password
         } else {
           extendSession();
         }
@@ -280,6 +299,8 @@ const Home = () => {
   const handleUnlock = async (unlockPassword: string) => {
     try {
       setPassword(unlockPassword);
+      // Store password in sessionStorage for persistence across component remounts
+      sessionStorage.setItem("veil:session_password", unlockPassword);
       setIsLocked(false);
       await loadWallets();
 
@@ -294,6 +315,7 @@ const Home = () => {
       console.error("[Veil] Error during unlock:", error);
       setIsLocked(true);
       setPassword("");
+      sessionStorage.removeItem("veil:session_password");
     }
   };
 
@@ -307,15 +329,39 @@ const Home = () => {
     }
   };
 
-  // Initialize Privacy Cash service when wallet is unlocked and active wallet changes
-  // Only depend on activeWallet.index to prevent re-init loops when wallet object reference changes
-  // Only initialize if Privacy Cash mode is enabled
+  // Load persisted private balance when wallet changes
   const activeWalletIndex = activeWallet?.index;
   useEffect(() => {
+    if (activeWalletIndex !== undefined && privacyCashMode) {
+      // Immediately load persisted balance from storage
+      getStoredPrivateBalance(activeWalletIndex).then((storedBalance) => {
+        if (storedBalance > 0) {
+          setPrivateBalance(storedBalance);
+        }
+      });
+    }
+  }, [activeWalletIndex, privacyCashMode]);
+
+  // Initialize Privacy Cash service and refresh balance when password is available
+  // This runs after unlock or when service needs to be initialized
+  useEffect(() => {
+    // Get password from state or sessionStorage
+    const getPassword = () => {
+      if (password) return password;
+      const sessionPassword = sessionStorage.getItem("veil:session_password");
+      if (sessionPassword) {
+        setPassword(sessionPassword); // Restore to state
+        return sessionPassword;
+      }
+      return null;
+    };
+
+    const currentPassword = getPassword();
+
     if (
       !isLocked &&
       activeWalletIndex !== undefined &&
-      password &&
+      currentPassword &&
       privacyCashMode
     ) {
       let isMounted = true;
@@ -327,25 +373,33 @@ const Home = () => {
           // Skip if already initialized for this wallet
           const currentPubKey = service.getCurrentPublicKey();
           // Use getKeypairForIndex to handle private key imports correctly
-          const keypair = await getKeypairForIndex(password, activeWalletIndex);
+          const keypair = await getKeypairForIndex(currentPassword, activeWalletIndex);
           const newPubKey = keypair.publicKey.toBase58();
 
           if (currentPubKey === newPubKey) {
-            // Already initialized for this wallet, just refresh balance
+            // Already initialized for this wallet, just refresh balance from API
             const balance = await service.getPrivateBalance();
-            if (isMounted) setPrivateBalance(balance);
+            if (isMounted) {
+              setPrivateBalance(balance);
+              // Persist to storage
+              await storePrivateBalance(activeWalletIndex, balance);
+            }
             return;
           }
 
           await service.initialize(keypair);
           if (!isMounted) return;
 
-          // Load private balance
+          // Load private balance from API
           const balance = await service.getPrivateBalance();
-          if (isMounted) setPrivateBalance(balance);
+          if (isMounted) {
+            setPrivateBalance(balance);
+            // Persist to storage
+            await storePrivateBalance(activeWalletIndex, balance);
+          }
         } catch (error) {
           console.error("[Veil] Error initializing Privacy Cash:", error);
-          if (isMounted) setPrivateBalance(0);
+          // Don't reset to 0 - keep the persisted balance
         }
       };
 
@@ -354,9 +408,6 @@ const Home = () => {
       return () => {
         isMounted = false;
       };
-    } else {
-      // Reset balance when locked, no active wallet, or Privacy Cash mode disabled
-      setPrivateBalance(0);
     }
   }, [isLocked, activeWalletIndex, password, privacyCashMode]);
 
@@ -475,9 +526,26 @@ const Home = () => {
       // Deposit to Privacy Cash
       const result = await service.deposit(lamports);
 
-      // Refresh balances
-      const newPrivateBalance = await service.getPrivateBalance();
+      // Clear cache and wait for UTXOs to appear on-chain
+      await service.clearCache();
+
+      // Wait a bit for the transaction to be confirmed and UTXOs to be indexed
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+
+      // Refresh balances with retry
+      let newPrivateBalance = await service.getPrivateBalance();
+
+      // If balance is still 0, wait a bit more and retry (UTXOs might take time to index)
+      if (newPrivateBalance === 0) {
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+        await service.clearCache();
+        newPrivateBalance = await service.getPrivateBalance();
+      }
+
       setPrivateBalance(newPrivateBalance);
+      
+      // Persist to storage
+      await storePrivateBalance(activeWallet.index, newPrivateBalance);
 
       // Reload wallets to update burner wallet balance
       await loadWallets();
@@ -564,6 +632,9 @@ const Home = () => {
       // Refresh private balance
       const newBalance = await service.getPrivateBalance();
       setPrivateBalance(newBalance);
+      
+      // Persist to storage
+      await storePrivateBalance(activeWallet.index, newBalance);
 
       // Update transaction as confirmed
       transaction.status = "confirmed";
@@ -579,6 +650,103 @@ const Home = () => {
       await storeTransaction(transaction);
 
       throw error;
+    }
+  };
+
+  // Refresh private balance manually
+  const refreshPrivateBalance = async () => {
+    if (!privacyCashMode) {
+      console.warn("[Veil] Privacy Cash mode is not enabled");
+      return;
+    }
+    
+    if (!activeWallet) {
+      console.warn("[Veil] No active wallet selected");
+      return;
+    }
+
+    // Try to get password from state or sessionStorage
+    let currentPassword = password;
+    if (!currentPassword) {
+      // Check session password first (persistent across remounts)
+      const sessionPassword = sessionStorage.getItem("veil:session_password");
+      if (sessionPassword) {
+        currentPassword = sessionPassword;
+        setPassword(sessionPassword); // Restore to state
+      } else {
+        // Fallback to temp password (for first-time generation)
+        const tempPassword = sessionStorage.getItem("veil:temp_password");
+        if (tempPassword) {
+          currentPassword = tempPassword;
+          setPassword(tempPassword);
+        }
+      }
+    }
+
+    // Check if wallet is actually locked
+    const walletLocked = await isWalletLocked();
+    if (walletLocked) {
+      console.warn("[Veil] Wallet is locked. Please unlock first.");
+      setIsLocked(true);
+      return;
+    }
+
+    // If password is not available but wallet is unlocked, just reload from storage
+    if (!currentPassword) {
+      console.log("[Veil] Password not available, reloading from persisted storage...");
+      setIsRefreshingPrivateBalance(true);
+      try {
+        const storedBalance = await getStoredPrivateBalance(activeWallet.index);
+        setPrivateBalance(storedBalance);
+        console.log("[Veil] Reloaded balance from storage:", storedBalance);
+      } catch (error) {
+        console.error("[Veil] Error reloading from storage:", error);
+      } finally {
+        setIsRefreshingPrivateBalance(false);
+      }
+      return;
+    }
+
+    setIsRefreshingPrivateBalance(true);
+    try {
+      console.log("[Veil] Starting private balance refresh...");
+      const service = getPrivacyCashService();
+
+      // Ensure service is initialized
+      if (!service.isInitialized()) {
+        console.log("[Veil] Service not initialized, initializing now...");
+        const keypair = await getKeypairForIndex(currentPassword, activeWallet.index);
+        await service.initialize(keypair);
+      }
+
+      // Clear cache and refresh
+      console.log("[Veil] Clearing cache...");
+      await service.clearCache();
+      
+      // Wait a moment for cache to clear
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      console.log("[Veil] Fetching private balance...");
+      const newBalance = await service.getPrivateBalance();
+      console.log("[Veil] New balance:", newBalance);
+      
+      setPrivateBalance(newBalance);
+      
+      // Persist to storage
+      await storePrivateBalance(activeWallet.index, newBalance);
+      
+      if (newBalance === 0) {
+        console.warn("[Veil] Balance is still 0 after refresh. Check console for errors.");
+      }
+    } catch (error) {
+      console.error("[Veil] Error refreshing private balance:", error);
+      if (error instanceof Error) {
+        console.error("[Veil] Error message:", error.message);
+        console.error("[Veil] Error stack:", error.stack);
+      }
+      // Show error to user somehow? Or just log it
+    } finally {
+      setIsRefreshingPrivateBalance(false);
     }
   };
 
@@ -978,7 +1146,27 @@ const Home = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">SOL</span>
+                  <img
+                    src={
+                      typeof chrome !== 'undefined' && chrome.runtime
+                        ? chrome.runtime.getURL("solana.svg")
+                        : "/solana.svg"
+                    }
+                    alt="Solana"
+                    className="w-6 h-6 object-contain"
+                    onError={(e) => {
+                      // Fallback to text if image fails to load
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                      const parent = target.parentElement;
+                      if (parent && !parent.querySelector('.fallback-text')) {
+                        const fallback = document.createElement('span');
+                        fallback.className = 'fallback-text text-white font-bold text-sm';
+                        fallback.textContent = 'SOL';
+                        parent.appendChild(fallback);
+                      }
+                    }}
+                  />
                 </div>
                 <div>
                   <div className="flex items-center gap-1.5">
@@ -1001,8 +1189,8 @@ const Home = () => {
             </div>
           </motion.div>
 
-          {/* Private Balance Card - Only show when Privacy Cash mode is enabled */}
-          {privacyCashMode && privateBalance > 0 && (
+          {/* Private Balance Card - Show when Privacy Cash mode is enabled */}
+          {privacyCashMode && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -1024,11 +1212,23 @@ const Home = () => {
                     </p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm font-semibold text-purple-300">
-                    ${(privateBalance * (solPrice || 145)).toFixed(2)}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-0.5">-</p>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={refreshPrivateBalance}
+                    disabled={isRefreshingPrivateBalance}
+                    className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors disabled:opacity-50"
+                    title="Refresh private balance"
+                  >
+                    <RefreshCw
+                      className={`w-3.5 h-3.5 text-purple-400 ${isRefreshingPrivateBalance ? "animate-spin" : ""}`}
+                    />
+                  </button>
+                  <div className="text-right">
+                    <p className="text-sm font-semibold text-purple-300">
+                      ${(privateBalance * (solPrice || 145)).toFixed(2)}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-0.5">-</p>
+                  </div>
                 </div>
               </div>
             </motion.div>
@@ -1048,10 +1248,15 @@ const Home = () => {
             </button>
           )}
 
-          {privacyCashMode && privateBalance > 0 && (
+          {privacyCashMode && (
             <button
               onClick={() => setShowWithdrawModal(true)}
-              className="py-2.5 px-4 font-medium rounded-xl text-sm flex items-center justify-center gap-2 transition-all bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-500 hover:to-purple-500 active:scale-[0.98]"
+              disabled={privateBalance <= 0}
+              className={`py-2.5 px-4 font-medium rounded-xl text-sm flex items-center justify-center gap-2 transition-all ${
+                privateBalance > 0
+                  ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-500 hover:to-purple-500 active:scale-[0.98]"
+                  : "bg-white/5 text-gray-500 border border-white/10 cursor-not-allowed"
+              }`}
             >
               <ArrowUp className="w-4 h-4" />
               <span>Withdraw from Privacy</span>

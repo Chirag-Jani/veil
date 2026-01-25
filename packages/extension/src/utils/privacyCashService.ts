@@ -48,18 +48,23 @@ class PrivacyCashService {
   async initialize(keypair: Keypair, rpcUrls?: string[]): Promise<void> {
     // Clean up existing service if switching wallets
     if (this.currentKeypair && this.currentKeypair !== keypair) {
+      console.log("[PrivacyCash] Switching wallets, destroying old service...");
       await this.destroy();
     }
 
     // If already initialized for this keypair, skip
     if (this.currentKeypair === keypair && this.rpcManager) {
+      console.log("[PrivacyCash] Already initialized for this keypair");
       return;
     }
 
     try {
+      console.log("[PrivacyCash] Initializing service...");
+      
       // Initialize storage cache
       await initializeStorageCache();
       this.storage = getPrivacyCashStorage();
+      console.log("[PrivacyCash] Storage initialized");
 
       // Get or create RPC manager
       if (rpcUrls && rpcUrls.length > 0) {
@@ -67,14 +72,19 @@ class PrivacyCashService {
       } else {
         this.rpcManager = createRPCManager();
       }
+      console.log("[PrivacyCash] RPC manager created");
 
       // Preload storage for this public key
       const publicKey = keypair.publicKey.toBase58();
       await preloadStorageForPublicKey(publicKey);
+      console.log("[PrivacyCash] Storage preloaded for:", publicKey);
 
       // Create encryption service
       this.encryptionService = new EncryptionService();
-      this.encryptionService.deriveEncryptionKeyFromWallet(keypair);
+      const keys = this.encryptionService.deriveEncryptionKeyFromWallet(keypair);
+      console.log("[PrivacyCash] Encryption service initialized");
+      console.log("[PrivacyCash] Has V1 key:", !!keys.v1);
+      console.log("[PrivacyCash] Has V2 key:", !!keys.v2);
 
       // Store current state
       this.currentKeypair = keypair;
@@ -83,6 +93,7 @@ class PrivacyCashService {
       console.log("[PrivacyCash] Initialized for wallet:", publicKey);
     } catch (error) {
       console.error("[PrivacyCash] Error initializing:", error);
+      console.error("[PrivacyCash] Error stack:", error instanceof Error ? error.stack : "No stack");
       throw error;
     }
   }
@@ -114,22 +125,30 @@ class PrivacyCashService {
       throw new Error("Privacy Cash service not initialized. Call initialize() first.");
     }
 
+    // Extract keypair to local variable to satisfy TypeScript null checks
+    const keypair = this.currentKeypair;
+    const encryptionService = this.encryptionService;
+    const storage = this.storage;
+
     try {
       const result = await this.rpcManager.executeWithRetry(async (connection) => {
         const lightWasm = await WasmFactory.getInstance();
         const publicKey = this.getPublicKey();
-        const transactionSigner = createPrivacyCashSigner(this.currentKeypair!);
+        const transactionSigner = createPrivacyCashSigner(keypair);
         const keyBasePath = this.getCircuitBasePath();
+        // Explicitly pass signer to ensure the correct keypair is used for balance checks and transaction signing
+        const signer = keypair.publicKey;
 
         return await deposit({
           lightWasm,
           amount_in_lamports: lamports,
           connection,
-          encryptionService: this.encryptionService!,
+          encryptionService,
           publicKey,
           transactionSigner,
           keyBasePath,
-          storage: this.storage!,
+          storage,
+          signer,
         });
       });
 
@@ -192,26 +211,46 @@ class PrivacyCashService {
    */
   async getPrivateBalance(): Promise<number> {
     if (!this.currentKeypair || !this.encryptionService || !this.rpcManager || !this.storage) {
+      console.error("[PrivacyCash] Service not initialized for getPrivateBalance");
       throw new Error("Privacy Cash service not initialized. Call initialize() first.");
     }
 
+    // Extract to local variables for closure
+    const encryptionService = this.encryptionService;
+    const storage = this.storage;
+
     try {
+      console.log("[PrivacyCash] Fetching private balance...");
+      console.log("[PrivacyCash] Public key:", this.currentPublicKey);
+      
       const balanceResult = await this.rpcManager.executeWithRetry(async (connection) => {
         const publicKey = this.getPublicKey();
+        console.log("[PrivacyCash] Calling getUtxos for:", publicKey.toBase58());
+        
         const utxos = await getUtxos({
           publicKey,
           connection,
-          encryptionService: this.encryptionService!,
-          storage: this.storage!,
+          encryptionService,
+          storage,
         });
+        
+        console.log("[PrivacyCash] Found UTXOs:", utxos.length);
+        
+        if (utxos.length > 0) {
+          console.log("[PrivacyCash] UTXO amounts:", utxos.map(u => u.amount.toString()));
+        }
+        
         return getBalanceFromUtxos(utxos);
       });
 
-      // Convert from lamports to SOL
-      return balanceResult.lamports / LAMPORTS_PER_SOL;
+      const balanceInSol = balanceResult.lamports / LAMPORTS_PER_SOL;
+      console.log("[PrivacyCash] Balance result:", balanceResult.lamports, "lamports =", balanceInSol, "SOL");
+      
+      return balanceInSol;
     } catch (error) {
       console.error("[PrivacyCash] Get balance error:", error);
-      // Return 0 on error rather than throwing
+      console.error("[PrivacyCash] Error stack:", error instanceof Error ? error.stack : "No stack");
+      // Return 0 on error rather than throwing - but log the error for debugging
       return 0;
     }
   }

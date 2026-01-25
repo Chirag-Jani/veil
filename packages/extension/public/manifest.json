@@ -16,7 +16,10 @@
     "https://api.mainnet-beta.solana.com/*",
     "https://*.alchemy.com/*",
     "https://*.helius-rpc.com/*",
-    "https://*.solana.com/*"
+    "https://*.solana.com/*",
+    "https://*.privacycash.org/*",
+    "https://api3.privacycash.org/*",
+    "https://api.coingecko.com/*"
   ],
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"

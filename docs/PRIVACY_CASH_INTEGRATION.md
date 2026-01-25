@@ -209,10 +209,15 @@ public/circuit2/
   - Full error handling implemented
 
 ### ✅ Completed Enhancements
-- Privacy score/status display - Shows privacy score based on private balance and burner count
-- Transfer/Sweep functionality - Users can transfer SOL between wallets or sweep all funds
+- Privacy score/status display - Shows privacy score based on private balance and burner count (temporarily hidden)
+- Transfer functionality - Users can transfer SOL between wallets with improved error handling
+- Transaction confirmation - Non-blocking confirmation with timeout handling
+- Password handling - Improved password retrieval from state or sessionStorage
+- Activity UI redesign - Modern, compact design with Solana branding and detailed transaction views
+- Dynamic SOL price - Real-time SOL/USD price fetching from CoinGecko API
 
 ### 🔮 Future Enhancements
 - SPL token support (USDC, USDT deposits/withdrawals)
-- Transaction history for Privacy Cash operations
+- Transaction history for Privacy Cash operations (✅ Already implemented)
 - Push notifications for incoming funds
+- Privacy score display (deferred for later)

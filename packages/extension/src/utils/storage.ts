@@ -189,3 +189,28 @@ export async function removeConnectedSite(domain: string): Promise<void> {
   const key = `veil:site:${domain}`;
   await chrome.storage.local.remove(key);
 }
+
+/**
+ * Store private balance for a wallet
+ */
+export async function storePrivateBalance(walletIndex: number, balance: number): Promise<void> {
+  const key = `veil:private_balance:${walletIndex}`;
+  await chrome.storage.local.set({ [key]: balance });
+}
+
+/**
+ * Get private balance for a wallet
+ */
+export async function getPrivateBalance(walletIndex: number): Promise<number> {
+  const key = `veil:private_balance:${walletIndex}`;
+  const result = await chrome.storage.local.get(key);
+  return result[key] ?? 0;
+}
+
+/**
+ * Clear private balance for a wallet
+ */
+export async function clearPrivateBalance(walletIndex: number): Promise<void> {
+  const key = `veil:private_balance:${walletIndex}`;
+  await chrome.storage.local.remove(key);
+}

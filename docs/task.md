@@ -33,6 +33,10 @@
 - [x] Enhanced balance display section with improved typography and gradient effects
 - [x] Improved action buttons (Migrate to Privacy & New Burner) with gradient styling and better visual hierarchy
 - [x] More compact activity tab layout with optimized spacing and information density
+- [x] **Activity UI Redesign** - Modern, compact design with Solana branding
+- [x] **Transaction Detail Modal** - Redesigned with key-value pairs, network fee display, and detailed date formatting
+- [x] **Home Page UI** - Redesigned balance display, action buttons, and token cards
+- [x] **Dynamic SOL Price** - Real-time SOL/USD price fetching from CoinGecko API
 
 ---
 
@@ -64,6 +68,8 @@
 - [x] Integrate Solana Web3.js for real account queries
 - [x] Real-time balance checking for burner wallets (via balance monitor)
 - [x] Address validation and formatting
+- [x] SOL transfer functionality with improved error handling
+- [x] Non-blocking transaction confirmation with timeout handling
 - [ ] Transaction building and local signing (for dApp interactions)
 
 ---
@@ -92,16 +98,20 @@
 
 ### Balance Monitoring ✅
 - [x] Background monitoring for incoming SOL deposits
-- [x] Polling RPC for burner wallet balances (every 30 seconds)
+- [x] Polling RPC for burner wallet balances (configurable interval, default: 30 seconds)
 - [x] Automatic balance updates in stored wallet data
 - [x] Real-time UI updates when balances change
 - [x] Balance monitor service with RPC rotation support
+- [x] Sequential wallet processing to reduce rate limiting
 - [ ] Push notifications for incoming funds (optional)
 
 ### Manual Fund Migration ✅
-- [x] User-initiated sweep/drain functionality
+- [x] User-initiated transfer functionality
 - [x] Transfer UI for moving funds between wallets
-- [x] TransferModal component with sweep mode toggle
+- [x] TransferModal component with MAX button
+- [x] Improved password handling and wallet lock checks
+- [x] Non-blocking transaction confirmation with timeout handling
+- [x] Enhanced error messages and logging
 
 ### Privacy Cash Integration ✅
 - [x] Install Privacy Cash SDK (`privacycash` npm package)
