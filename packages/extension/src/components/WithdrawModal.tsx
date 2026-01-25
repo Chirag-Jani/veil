@@ -1,8 +1,8 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowUp, Check, Copy, Loader2, X } from "lucide-react";
 import { useState } from "react";
-import { formatAddress } from "../utils/storage";
 import { getErrorMessage } from "../utils/errorHandler";
+import { formatAddress } from "../utils/storage";
 
 interface WithdrawModalProps {
   isOpen: boolean;
@@ -20,7 +20,7 @@ const WithdrawModal = ({
   defaultRecipient,
 }: WithdrawModalProps) => {
   const [amount, setAmount] = useState<string>("");
-  const [recipient, setRecipient] = useState<string>(defaultRecipient || "");
+  const [recipient, setRecipient] = useState<string>("");
   const [useDefaultRecipient, setUseDefaultRecipient] = useState(true);
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -89,7 +89,7 @@ const WithdrawModal = ({
         onClose();
       }, 1000);
     } catch (err) {
-      setError(getErrorMessage(err, 'withdrawing funds'));
+      setError(getErrorMessage(err, "withdrawing funds"));
       setIsWithdrawing(false);
     }
   };
@@ -268,23 +268,6 @@ const WithdrawModal = ({
                       className="mt-2 w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-600 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 disabled:opacity-50 disabled:cursor-not-allowed font-mono text-sm"
                     />
                   )}
-                </div>
-              </div>
-
-              {/* Info Box */}
-              <div className="mb-6 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
-                <div className="flex items-start gap-2">
-                  <ArrowUp className="w-4 h-4 text-blue-400 mt-0.5 shrink-0" />
-                  <div className="flex-1">
-                    <p className="text-xs text-blue-300 font-medium mb-1">
-                      What happens next?
-                    </p>
-                    <p className="text-xs text-blue-400/80">
-                      Your funds will be withdrawn from Privacy Cash and sent to
-                      the recipient address. This process typically takes 30-60
-                      seconds.
-                    </p>
-                  </div>
                 </div>
               </div>
 

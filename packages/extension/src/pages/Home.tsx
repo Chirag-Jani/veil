@@ -481,15 +481,24 @@ const Home = () => {
     // Try to get password from state or sessionStorage
     let currentPassword = password;
     if (!currentPassword) {
-      const tempPassword = sessionStorage.getItem("veil:temp_password");
-      if (tempPassword) {
-        currentPassword = tempPassword;
-        setPassword(tempPassword);
+      // Check session password first (persistent across remounts)
+      const sessionPassword = sessionStorage.getItem("veil:session_password");
+      if (sessionPassword) {
+        currentPassword = sessionPassword;
+        setPassword(sessionPassword);
+      } else {
+        // Fallback to temp password
+        const tempPassword = sessionStorage.getItem("veil:temp_password");
+        if (tempPassword) {
+          currentPassword = tempPassword;
+          setPassword(tempPassword);
+        }
       }
     }
 
     if (!currentPassword) {
-      throw new Error("Wallet is locked. Please unlock your wallet first.");
+      // Password not available - need to re-unlock
+      throw new Error("Session expired. Please close this dialog, unlock your wallet, and try again.");
     }
 
     const txId = generateTransactionId();
@@ -582,15 +591,25 @@ const Home = () => {
     // Try to get password from state or sessionStorage
     let currentPassword = password;
     if (!currentPassword) {
-      const tempPassword = sessionStorage.getItem("veil:temp_password");
-      if (tempPassword) {
-        currentPassword = tempPassword;
-        setPassword(tempPassword);
+      // Check session password first (persistent across remounts)
+      const sessionPassword = sessionStorage.getItem("veil:session_password");
+      if (sessionPassword) {
+        currentPassword = sessionPassword;
+        setPassword(sessionPassword);
+      } else {
+        // Fallback to temp password
+        const tempPassword = sessionStorage.getItem("veil:temp_password");
+        if (tempPassword) {
+          currentPassword = tempPassword;
+          setPassword(tempPassword);
+        }
       }
     }
 
     if (!currentPassword) {
-      throw new Error("Wallet is locked. Please unlock your wallet first.");
+      // Password not available - need to re-unlock
+      // Just throw the error, the modal will close and user can unlock and retry
+      throw new Error("Session expired. Please close this dialog, unlock your wallet, and try again.");
     }
 
     const txId = generateTransactionId();
@@ -612,10 +631,17 @@ const Home = () => {
     await storeTransaction(transaction);
 
     try {
+      console.log("[Veil] Starting withdraw:", {
+        amount,
+        recipient: recipient || activeWallet.fullAddress,
+        walletIndex: activeWallet.index,
+      });
+
       const service = getPrivacyCashService();
 
       // Ensure service is initialized
       if (!service.isInitialized()) {
+        console.log("[Veil] Service not initialized, initializing for withdraw...");
         const keypair = await getKeypairForIndex(
           currentPassword,
           activeWallet.index,
@@ -625,12 +651,27 @@ const Home = () => {
 
       // Convert SOL to lamports
       const lamports = Math.floor(amount * LAMPORTS_PER_SOL);
+      console.log("[Veil] Withdrawing", lamports, "lamports (", amount, "SOL)");
+
+      // Validate recipient address if provided
+      if (recipient) {
+        try {
+          new PublicKey(recipient);
+        } catch {
+          throw new Error(`Invalid recipient address: ${recipient}`);
+        }
+      }
 
       // Withdraw from Privacy Cash
+      console.log("[Veil] Calling Privacy Cash withdraw...");
       const result = await service.withdraw(lamports, recipient);
+      console.log("[Veil] Withdraw result:", result);
 
       // Refresh private balance
+      console.log("[Veil] Refreshing private balance after withdraw...");
       const newBalance = await service.getPrivateBalance();
+      console.log("[Veil] New private balance:", newBalance);
+      
       setPrivateBalance(newBalance);
       
       // Persist to storage
@@ -641,7 +682,14 @@ const Home = () => {
       transaction.signature = result.tx;
       transaction.privateBalanceAfter = newBalance;
       await storeTransaction(transaction);
+
+      console.log("[Veil] Withdraw completed successfully");
     } catch (error) {
+      console.error("[Veil] Withdraw error details:", error);
+      if (error instanceof Error) {
+        console.error("[Veil] Error message:", error.message);
+        console.error("[Veil] Error stack:", error.stack);
+      }
       logError(error, "withdrawing from Privacy Cash");
 
       // Update transaction as failed
@@ -768,10 +816,18 @@ const Home = () => {
     // Try to get password from state or sessionStorage
     let currentPassword = password;
     if (!currentPassword) {
-      const tempPassword = sessionStorage.getItem("veil:temp_password");
-      if (tempPassword) {
-        currentPassword = tempPassword;
-        setPassword(tempPassword); // Store in state for future use
+      // Check session password first (persistent across remounts)
+      const sessionPassword = sessionStorage.getItem("veil:session_password");
+      if (sessionPassword) {
+        currentPassword = sessionPassword;
+        setPassword(sessionPassword);
+      } else {
+        // Fallback to temp password
+        const tempPassword = sessionStorage.getItem("veil:temp_password");
+        if (tempPassword) {
+          currentPassword = tempPassword;
+          setPassword(tempPassword);
+        }
       }
     }
 
