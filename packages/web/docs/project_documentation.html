@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Veil Project Documentation</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px;
+        }
+        h1 { border-bottom: 2px solid #eaeaea; padding-bottom: 10px; color: #111; }
+        h2 { border-bottom: 1px solid #eaeaea; padding-bottom: 10px; margin-top: 40px; color: #222; }
+        h3 { margin-top: 30px; color: #444; }
+        code { background-color: #f6f8fa; padding: 2px 4px; border-radius: 4px; font-family: Consolas, monospace; font-size: 0.9em; }
+        pre { background-color: #f6f8fa; padding: 16px; border-radius: 6px; overflow-x: auto; }
+        blockquote { border-left: 4px solid #dfe2e5; margin: 0; padding-left: 16px; color: #6a737d; }
+        ul { padding-left: 20px; }
+        li { margin-bottom: 8px; }
+        @media print {
+            body { max-width: 100%; padding: 20px; }
+            a { text-decoration: none; color: #333; }
+        }
+    </style>
+</head>
+<body>
+
+<h1>Veil Project Documentation</h1>
+
+<h2>1. Executive Overview</h2>
+<p><strong>Veil</strong> is a privacy-focused browser extension and protocol designed to restore financial anonymity on public blockchains (initially targeting Solana). It addresses the fundamental issue of "Permanent Exposure" in current crypto wallets by introducing <strong>Disposable Identities</strong> and a <strong>Zero-Knowledge Privacy Protocol</strong>. Use Veil to transact, receive airdrops, and manage funds without exposing your main wallet's history or net worth.</p>
+
+<p><strong>Tagline</strong>: "Privacy in a Masterpiece."</p>
+
+<h3>Key Value Proposition</h3>
+<ul>
+    <li><strong>Instant Anonymity</strong>: Generate disposable wallets in milliseconds.</li>
+    <li><strong>Cryptographic Privacy</strong>: Uses ZK-SNARKs to mathematically disassociate deposits from withdrawals.</li>
+    <li><strong>Non-Custodial</strong>: Keys are generated locally; you never give up control of your funds.</li>
+    <li><strong>Seamless Experience</strong>: A modern, premium browser extension interface.</li>
+</ul>
+
+<hr>
+
+<h2>2. Problem Statement</h2>
+<p>Public blockchains build trust through transparency, but this creates significant privacy and security risks for individuals.</p>
+<ol>
+    <li><strong>Permanent Exposure</strong>: Every transaction is permanently recorded and linked to your wallet address. Once your identity is linked to an address, your entire financial history is public.</li>
+    <li><strong>On-Chain Tracking</strong>: Blockchain analytics companies and bad actors can trace your funds across wallets, building a complete profile of your spending, holdings, and behavior.</li>
+    <li><strong>Targeted Attacks</strong>: Visible wealth makes users targets for phishing, social engineering, and physical threats.</li>
+    <li><strong>Lack of Separation</strong>: Standard wallets mix all activities (salary, trading, airdrops) in one place, making it impossible to compartmentalize financial activity.</li>
+</ol>
+
+<h2>3. The Solution</h2>
+<p>Veil provides a comprehensive privacy layer that sits between the public blockchain and your user experience.</p>
+
+<h3>Core Features</h3>
+<ul>
+    <li><strong>Disposable Wallets</strong>: Create fresh, temporary addresses for specific transactions (e.g., "Airdrop Wallet", "One-time Payment").</li>
+    <li><strong>Privacy Cash Protocol</strong>: A smart contract based mixing pool using Zero-Knowledge proofs.</li>
+    <li><strong>Client-Side Security</strong>: All sensitive operations (key generation, signing) happen in the browser. No server ever sees your keys.</li>
+    <li><strong>Protocol Agnostic Design</strong>: Built for a multi-chain future, starting with high-speed chains like Solana.</li>
+</ul>
+
+<hr>
+
+<h2>4. Technical Architecture</h2>
+
+<h3>4.1 Technology Stack</h3>
+<ul>
+    <li><strong>Frontend</strong>: React, TypeScript, Vite</li>
+    <li><strong>UI Framework</strong>: Tailwind CSS, shadcn/ui</li>
+    <li><strong>Animations</strong>: Framer Motion, GSAP, Lenis (for smooth scrolling)</li>
+    <li><strong>Blockchain</strong>: Solana (implied context), Zero-Knowledge Proof circuits (ZK-SNARKs)</li>
+    <li><strong>Storage</strong>: Encrypted Local Storage (Browser)</li>
+</ul>
+
+<h3>4.2 Frontend Flow (Extension Extension)</h3>
+<p>The Frontend is a Chrome-based browser extension acting as the user's interface to the privacy protocol.</p>
+
+<h4>User Journey & detailed Flow:</h4>
+<ol>
+    <li><strong>Initialization</strong>:
+        <ul>
+            <li>User installs extension.</li>
+            <li><strong>Onboarding</strong>: User creates a master password.</li>
+            <li><strong>Key Generation</strong>: The extension generates a master seed phrase locally using cryptographically secure randomness.</li>
+            <li><strong>Encryption</strong>: This seed is encrypted with the user's password and stored in <code>localStorage</code> or <code>chrome.storage.local</code>.</li>
+        </ul>
+    </li>
+    <li><strong>Dashboard View</strong>:
+        <ul>
+            <li>Displays a list of active "Temporary Wallets".</li>
+            <li>Shows the "Main Wallet" balance (which is kept separate from public view).</li>
+            <li><strong>Action</strong>: "New Wallet" button allows creating a new identity instantly.</li>
+        </ul>
+    </li>
+    <li><strong>Disposable Wallet Creation</strong>:
+        <ul>
+            <li>User clicks "New Wallet".</li>
+            <li>Extension derives a new key pair from the master seed (using a hierarchical deterministic path).</li>
+            <li>The wallet is labeled (e.g., "Burner #1") and added to the list.</li>
+            <li>The user can now copy this address to receive funds.</li>
+        </ul>
+    </li>
+    <li><strong>Privacy Migration (The "Mix")</strong>:
+        <ul>
+            <li><strong>Input</strong>: User selects a Temporary Wallet containing funds (e.g., received from an exchange).</li>
+            <li><strong>Action</strong>: User clicks "Migrate to Pool".</li>
+            <li><strong>Process</strong>:
+                <ul>
+                    <li>The extension constructs a transaction to deposit funds into the <strong>Veil Privacy Pool</strong> smart contract.</li>
+                    <li>Simultaneously, it generates a <strong>Zero-Knowledge Note</strong> (a secret proof of deposit) enabling future withdrawal.</li>
+                    <li>This Note is stored encrypted in the extension.</li>
+                </ul>
+            </li>
+        </ul>
+    </li>
+    <li><strong>Private Withdrawal</strong>:
+        <ul>
+            <li><strong>Action</strong>: User selects "Withdraw" from the Privacy Pool.</li>
+            <li><strong>Target</strong>: User inputs their Main Wallet (or another fresh address).</li>
+            <li><strong>Proof Generation</strong>: The extension generates a ZK-SNARK proof using the stored Note. This proof confirms "I deposited funds" <em>without</em> revealing <em>which</em> deposit was mine.</li>
+            <li><strong>Execution</strong>: The smart contract verifies the proof and releases clean funds to the target address.</li>
+            <li><strong>Result</strong>: The on-chain link between the source (Temp Wallet) and destination (Main Wallet) is broken.</li>
+        </ul>
+    </li>
+</ol>
+
+<h3>4.3 Backend & Protocol Flow</h3>
+<p>Veil operates on a "Thick Client, Lean Protocol" model to maximize security.</p>
+
+<h4>Backend Components:</h4>
+<ul>
+    <li><strong>No Central Server</strong>: Veil does not manage user accounts, databases of transaction history, or keys.</li>
+    <li><strong>RPC Node</strong>: The extension connects directly to blockchain RPC nodes (e.g., Solana RPC) to query balances and broadcast transactions.</li>
+    <li><strong>Smart Contracts (The Protocol)</strong>:
+        <ul>
+            <li><strong>deposit()</strong>: Accepts funds + a commitment hash (derived from the Note). Adds the commitment to a Merkle Tree.</li>
+            <li><strong>withdraw()</strong>: Accepts a ZK-proof and a nullifier (to prevent double-spending). Verifies the proof against the Merkle Tree root. Transfers funds if valid.</li>
+        </ul>
+    </li>
+</ul>
+
+<h4>Security Architecture:</h4>
+<ol>
+    <li><strong>Zero Data Collection</strong>: Since there is no backend server for user data, no logs are kept. Privacy is enforced by design.</li>
+    <li><strong>Local Key Custody</strong>: Private keys never leave the browser execution environment.</li>
+    <li><strong>Auditability</strong>: The smart contract code and circuit constraints are open source, allowing community verification.</li>
+</ol>
+
+<hr>
+
+<h2>5. Development Roadmap</h2>
+<ul>
+    <li><strong>Phase 1 (Current)</strong>: Beta Extension, Basic Local Wallet Management, UI/UX Implementation. Integration of Privacy Cash Protocol (Smart Contract interaction).</li>
+    <li><strong>Phase 2</strong>: Mainnet Launch, Audits, and Multi-chain expansion.</li>
+</ul>
+
+</body>
+</html>

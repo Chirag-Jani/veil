@@ -1,3 +1,15 @@
+# Dependencies - only in packages, not root
+node_modules/
+packages/*/node_modules/
+
+# Build outputs
+dist/
+**/dist/
+dist-ssr/
+**/dist-ssr/
+build/
+**/build/
+
 # Logs
 logs
 *.log
@@ -7,10 +19,12 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
+# Environment variables - only in packages, not root
+.env
+.env.local
+.env.*.local
+packages/*/.env.local
+packages/*/.env.*.local
 
 # Editor directories and files
 .vscode/*
@@ -22,3 +36,12 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Temporary files
+*.local
+*.tmp
+*.temp

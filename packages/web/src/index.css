@@ -1,0 +1,212 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 240 10% 4%;
+    --foreground: 0 0% 98%;
+
+    --card: 240 10% 6%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 240 10% 6%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 263 70% 58%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 240 10% 12%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 240 10% 14%;
+    --muted-foreground: 240 5% 55%;
+
+    --accent: 199 89% 48%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 240 10% 18%;
+    --input: 240 10% 18%;
+    --ring: 263 70% 58%;
+
+    --radius: 0.75rem;
+
+    /* Custom tokens */
+    --glow-primary: 263 70% 58%;
+    --surface-elevated: 240 10% 8%;
+    --text-secondary: 240 5% 65%;
+    --text-tertiary: 240 5% 45%;
+    
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-body: 'Inter', sans-serif;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: auto;
+  }
+
+  body {
+    @apply bg-background text-foreground font-body antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+  }
+}
+
+@layer components {
+  .section-container {
+    @apply max-w-7xl mx-auto px-6 lg:px-8;
+  }
+
+  .text-gradient-primary {
+    @apply bg-clip-text text-transparent;
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%);
+  }
+
+  .glass-card {
+    @apply bg-card/50 backdrop-blur-xl border border-border/50 rounded-2xl;
+  }
+
+  .glow-border {
+    @apply relative;
+    box-shadow: 0 0 40px -15px hsl(var(--primary) / 0.4);
+  }
+
+  .glow-text {
+    text-shadow: 0 0 30px hsl(var(--primary) / 0.5);
+  }
+
+  .hero-badge {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium;
+    @apply bg-primary/10 text-primary border border-primary/20;
+  }
+
+  .section-label {
+    @apply text-sm font-semibold tracking-widest uppercase text-primary mb-4;
+  }
+
+  .section-title {
+    @apply text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-foreground;
+    font-family: var(--font-display);
+  }
+
+  .section-subtitle {
+    @apply text-lg md:text-xl text-muted-foreground max-w-2xl;
+  }
+
+  .flow-step {
+    @apply relative flex flex-col items-center text-center p-6;
+  }
+
+  .flow-step-number {
+    @apply w-12 h-12 rounded-full bg-primary/20 text-primary flex items-center justify-center text-lg font-bold mb-4 border border-primary/30;
+  }
+
+  .feature-card {
+    @apply p-6 rounded-2xl bg-card border border-border hover:border-primary/30 transition-all duration-300;
+  }
+
+  .feature-icon {
+    @apply w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary mb-4;
+  }
+
+  .nav-link {
+    @apply text-muted-foreground hover:text-foreground transition-colors duration-200 text-sm font-medium;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm;
+    @apply bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-200;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm;
+    @apply bg-secondary text-foreground border border-border hover:bg-muted transition-all duration-200;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm;
+    @apply text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all duration-200;
+  }
+
+  .roadmap-item {
+    @apply relative pl-8 pb-8 border-l-2 border-border last:border-transparent;
+  }
+
+  .roadmap-dot {
+    @apply absolute left-0 top-0 w-4 h-4 rounded-full bg-primary -translate-x-1/2 border-4 border-background;
+  }
+
+  .roadmap-dot-upcoming {
+    @apply bg-muted border-muted;
+  }
+
+  .comparison-table {
+    @apply w-full border-collapse;
+  }
+
+  .comparison-table th,
+  .comparison-table td {
+    @apply p-4 text-left border-b border-border;
+  }
+
+  .comparison-table th {
+    @apply font-semibold text-foreground bg-card/50;
+  }
+
+  .comparison-table td {
+    @apply text-muted-foreground;
+  }
+
+  .privacy-badge {
+    @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-accent/10 text-accent;
+  }
+}
+
+@layer utilities {
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-20px);
+    }
+  }
+
+  .reveal-up {
+    opacity: 0;
+    transform: translateY(60px);
+  }
+
+  .reveal-fade {
+    opacity: 0;
+  }
+
+  .reveal-scale {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}

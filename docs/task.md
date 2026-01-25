@@ -91,7 +91,7 @@
 ## Milestone 4: Funds Management & Privacy
 
 ### Balance Monitoring
-- [ ] Background monitoring for incoming deposits (SOL, SPL tokens)
+- [ ] Background monitoring for incoming SOL deposits
 - [ ] Polling RPC for burner wallet balances
 - [ ] Push notifications for incoming funds (optional)
 

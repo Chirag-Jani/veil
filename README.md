@@ -59,7 +59,7 @@ Each burner wallet is:
 
 ## Funds Handling
 
-- Incoming SOL / SPL tokens (e.g., USDC) shown in the extension.
+- Incoming SOL shown in the extension.
 - User can **manually migrate funds** to **Privacy Cash** for unlinkable on-chain privacy.
 - No forced mixing — user-controlled flow.
 
