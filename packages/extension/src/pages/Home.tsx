@@ -25,7 +25,9 @@ import {
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ComingSoonModal from "../components/ComingSoonModal";
+import ConnectionApproval from "../components/ConnectionApproval";
 import DepositModal from "../components/DepositModal";
+import SignApproval from "../components/SignApproval";
 import TransferModal from "../components/TransferModal";
 import UnlockWallet from "../components/UnlockWallet";
 import WithdrawModal from "../components/WithdrawModal";
@@ -46,11 +48,22 @@ import {
   formatAddress,
   getAddressFromKeypair,
   getAllBurnerWallets,
+  getAllConnectedSites,
+  getAllPendingConnections,
+  getAllPendingSignRequests,
   getNextAccountNumber,
   getPrivateBalance as getStoredPrivateBalance,
+  removeConnectedSite,
+  removePendingConnection,
+  removePendingSignRequest,
+  storeConnectionApproval,
+  storeSignApproval,
   storeBurnerWallet,
   storePrivateBalance,
   type BurnerWallet,
+  type ConnectedSite,
+  type PendingConnectionRequest,
+  type PendingSignRequest,
 } from "../utils/storage";
 import {
   generateTransactionId,
@@ -87,6 +100,9 @@ const Home = () => {
   const [password, setPassword] = useState(""); // Store password in memory during session
   const [privacyCashMode, setPrivacyCashMode] = useState<boolean>(false);
   const [solPrice, setSolPrice] = useState<number | null>(null); // SOL price in USD
+  const [pendingConnection, setPendingConnection] = useState<PendingConnectionRequest | null>(null);
+  const [pendingSignRequest, setPendingSignRequest] = useState<PendingSignRequest | null>(null);
+  const [connectedSites, setConnectedSites] = useState<ConnectedSite[]>([]);
 
   const loadWallets = useCallback(async () => {
     try {
@@ -99,6 +115,108 @@ const Home = () => {
       console.error("[Veil] Error loading wallets:", error);
     }
   }, []);
+
+  // Load connected sites
+  const loadConnectedSites = useCallback(async () => {
+    try {
+      const sites = await getAllConnectedSites();
+      setConnectedSites(sites.filter(site => site.connected));
+    } catch (error) {
+      console.error("[Veil] Error loading connected sites:", error);
+    }
+  }, []);
+
+  // Check for pending connection requests
+  const checkPendingConnections = useCallback(async () => {
+    try {
+      const pending = await getAllPendingConnections();
+      if (pending.length > 0) {
+        setPendingConnection(pending[0]); // Show first pending request
+      } else {
+        setPendingConnection(null);
+      }
+    } catch (error) {
+      console.error("[Veil] Error checking pending connections:", error);
+    }
+  }, []);
+
+  // Handle connection approval
+  const handleApproveConnection = useCallback(async () => {
+    if (!pendingConnection || !activeWallet) return;
+    
+    try {
+      // Store approval result - background script will handle storing the connected site
+      await storeConnectionApproval(pendingConnection.id, true, activeWallet.fullAddress);
+      setPendingConnection(null);
+      // Reload connected sites after approval
+      await loadConnectedSites();
+    } catch (error) {
+      console.error("[Veil] Error approving connection:", error);
+    }
+  }, [pendingConnection, activeWallet, loadConnectedSites]);
+
+  // Handle connection rejection
+  const handleRejectConnection = useCallback(async () => {
+    if (!pendingConnection) return;
+    
+    try {
+      // Store rejection result
+      await storeConnectionApproval(pendingConnection.id, false);
+      await removePendingConnection(pendingConnection.id);
+      setPendingConnection(null);
+    } catch (error) {
+      console.error("[Veil] Error rejecting connection:", error);
+    }
+  }, [pendingConnection]);
+
+  // Check for pending sign requests
+  const checkPendingSignRequests = useCallback(async () => {
+    try {
+      const pending = await getAllPendingSignRequests();
+      if (pending.length > 0) {
+        setPendingSignRequest(pending[0]); // Show first pending request
+      } else {
+        setPendingSignRequest(null);
+      }
+    } catch (error) {
+      console.error("[Veil] Error checking pending sign requests:", error);
+    }
+  }, []);
+
+  // Handle sign approval
+  const handleApproveSign = useCallback(async () => {
+    if (!pendingSignRequest) return;
+    
+    try {
+      await storeSignApproval(pendingSignRequest.id, true);
+      setPendingSignRequest(null);
+    } catch (error) {
+      console.error("[Veil] Error approving sign:", error);
+    }
+  }, [pendingSignRequest]);
+
+  // Handle sign rejection
+  const handleRejectSign = useCallback(async () => {
+    if (!pendingSignRequest) return;
+    
+    try {
+      await storeSignApproval(pendingSignRequest.id, false);
+      await removePendingSignRequest(pendingSignRequest.id);
+      setPendingSignRequest(null);
+    } catch (error) {
+      console.error("[Veil] Error rejecting sign:", error);
+    }
+  }, [pendingSignRequest]);
+
+  // Handle disconnecting a site
+  const handleDisconnectSite = useCallback(async (domain: string) => {
+    try {
+      await removeConnectedSite(domain);
+      await loadConnectedSites();
+    } catch (error) {
+      console.error("[Veil] Error disconnecting site:", error);
+    }
+  }, [loadConnectedSites]);
 
   const generateNewBurner = useCallback(
     async (pwd?: string) => {
@@ -267,6 +385,37 @@ const Home = () => {
     }
   }, [isLocked]);
 
+  // Check for pending connection requests
+  useEffect(() => {
+    if (!isLocked && activeWallet) {
+      // Check immediately
+      checkPendingConnections();
+      
+      // Poll for pending connections every second
+      const interval = setInterval(checkPendingConnections, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [isLocked, activeWallet, checkPendingConnections]);
+
+  // Check for pending sign requests
+  useEffect(() => {
+    if (!isLocked && activeWallet) {
+      // Check immediately
+      checkPendingSignRequests();
+      
+      // Poll for pending sign requests every second
+      const interval = setInterval(checkPendingSignRequests, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [isLocked, activeWallet, checkPendingSignRequests]);
+
+  // Load connected sites when sites list is shown
+  useEffect(() => {
+    if (showSitesList) {
+      loadConnectedSites();
+    }
+  }, [showSitesList, loadConnectedSites]);
+
   // Fetch SOL price from CoinGecko
   useEffect(() => {
     const fetchSolPrice = async () => {
@@ -301,8 +450,20 @@ const Home = () => {
       setPassword(unlockPassword);
       // Store password in sessionStorage for persistence across component remounts
       sessionStorage.setItem("veil:session_password", unlockPassword);
+      
+      // Store in chrome.storage for background script access
+      // Use both session (preferred) and local (fallback) storage
+      try {
+        await chrome.storage.session.set({ "veil:session_password": unlockPassword });
+      } catch {
+        // chrome.storage.session might not be available
+      }
+      // Also store in local storage as fallback
+      await chrome.storage.local.set({ "veil:temp_session_password": unlockPassword });
+      
       setIsLocked(false);
       await loadWallets();
+      await loadConnectedSites();
 
       // Auto-generate first burner if none exist
       const wallets = await getAllBurnerWallets();
@@ -310,12 +471,21 @@ const Home = () => {
         // Generate burner - errors will be handled gracefully inside
         await generateNewBurner(unlockPassword);
       }
+      
+      // Check for pending connection requests immediately
+      await checkPendingConnections();
     } catch (error) {
       // Handle unlock errors gracefully - lock wallet again
       console.error("[Veil] Error during unlock:", error);
       setIsLocked(true);
       setPassword("");
       sessionStorage.removeItem("veil:session_password");
+      try {
+        await chrome.storage.session.remove("veil:session_password");
+      } catch {
+        // Ignore
+      }
+      await chrome.storage.local.remove("veil:temp_session_password");
     }
   };
 
@@ -1095,7 +1265,11 @@ const Home = () => {
             className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors border border-white/5 relative"
           >
             <Globe className="w-4 h-4 text-gray-400" />
-            {/* TODO: Show connected sites count when implemented */}
+            {connectedSites.length > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-blue-500 text-white text-[10px] flex items-center justify-center font-bold">
+                {connectedSites.length}
+              </span>
+            )}
           </button>
           <button
             onClick={() => navigate("/history")}
@@ -1482,13 +1656,57 @@ const Home = () => {
               </div>
 
               <div className="px-3 pb-4 max-h-64 overflow-y-auto">
-                <div className="text-center py-6">
-                  <Globe className="w-10 h-10 text-gray-600 mx-auto mb-2" />
-                  <p className="text-gray-500 text-xs">No connected sites</p>
-                  <p className="text-gray-600 text-[10px] mt-2">
-                    Site connections will appear here
-                  </p>
-                </div>
+                {connectedSites.length === 0 ? (
+                  <div className="text-center py-6">
+                    <Globe className="w-10 h-10 text-gray-600 mx-auto mb-2" />
+                    <p className="text-gray-500 text-xs">No connected sites</p>
+                    <p className="text-gray-600 text-[10px] mt-2">
+                      Site connections will appear here
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {connectedSites.map((site) => {
+                      // Extract domain name from full origin
+                      const getDomainName = (origin: string) => {
+                        try {
+                          const url = new URL(origin);
+                          return url.hostname;
+                        } catch {
+                          return origin;
+                        }
+                      };
+                      const domainName = getDomainName(site.domain);
+                      
+                      return (
+                        <div
+                          key={site.id}
+                          className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-colors"
+                        >
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center shrink-0">
+                              <Globe className="w-4 h-4 text-gray-400" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-white text-sm font-medium truncate">
+                                {domainName}
+                              </p>
+                              <p className="text-gray-500 text-[10px] truncate">
+                                {site.domain}
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleDisconnectSite(site.domain)}
+                            className="px-3 py-1.5 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors"
+                          >
+                            Disconnect
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </motion.div>
           </>
@@ -1543,6 +1761,26 @@ const Home = () => {
           </>
         )}
       </AnimatePresence>
+
+      {/* Connection Approval Modal */}
+      {pendingConnection && activeWallet && (
+        <ConnectionApproval
+          request={pendingConnection}
+          walletAddress={activeWallet.fullAddress}
+          onApprove={handleApproveConnection}
+          onReject={handleRejectConnection}
+        />
+      )}
+
+      {/* Sign Approval Modal */}
+      {pendingSignRequest && activeWallet && (
+        <SignApproval
+          request={pendingSignRequest}
+          walletAddress={activeWallet.fullAddress}
+          onApprove={handleApproveSign}
+          onReject={handleRejectSign}
+        />
+      )}
 
       {/* Deposit Modal */}
       <DepositModal

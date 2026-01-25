@@ -20,22 +20,30 @@
 - [x] Full error handling implemented
 - [x] Tested on mainnet ✅
 
-### 2. dApp Provider Integration (window.solana)
-**Status:** Not started
-- [ ] Implement `window.solana` provider injection in content script
-- [ ] Create provider API compatibility layer
-- [ ] Handle `connect()`, `disconnect()`, `signTransaction()`, `signMessage()` methods
-- [ ] Site-specific burner wallet selection/generation
-- [ ] Permission management per site
-- [ ] Connection state persistence
+### 2. dApp Provider Integration (window.solana) ✅
+**Status:** Partially complete - Connection and message signing working
+- [x] Implement `window.solana` provider injection in content script
+- [x] Create provider API compatibility layer (`provider-inject.js`)
+- [x] Handle `connect()`, `disconnect()`, `signMessage()` methods
+- [x] Connection approval flow with user confirmation
+- [x] Connected sites management and storage
+- [x] Message signing with user approval
+- [x] Provider coexistence with Phantom/Solflare via `window.solana.providers`
+- [ ] Transaction signing (`signTransaction()`, `signAllTransactions()`) - Coming soon
+- [ ] Site-specific burner wallet selection/generation (deferred)
 
-**Files to create:**
-- `src/utils/solanaProvider.ts` - Provider implementation
-- `src/utils/providerProxy.ts` - Proxy handler for window.solana
+**Files created:**
+- `src/utils/solanaProvider.ts` - Provider implementation utilities
+- `public/provider-inject.js` - Injected provider script (CSP-compliant)
+- `src/components/ConnectionApproval.tsx` - Connection approval modal
+- `src/components/SignApproval.tsx` - Sign message approval modal
 
-**Files to modify:**
+**Files modified:**
 - `src/scripts/content.ts` - Inject provider on page load
-- `src/scripts/background.ts` - Handle provider messages
+- `src/scripts/background.ts` - Handle provider messages and approvals
+- `src/pages/Home.tsx` - Connection and sign approval handling
+- `src/utils/storage.ts` - Connected sites and pending request management
+- `src/types.ts` - Provider message types
 
 ### 3. Site-Bound Burner Wallet System
 **Status:** Partially implemented (burner generation works, site binding pending)
@@ -223,6 +231,7 @@
 2. ✅ **Wire up WithdrawModal** - Complete the Privacy Cash integration (DONE)
 3. ✅ **Transaction history** - User experience improvement (DONE)
 4. ✅ **Error handling** - Improved user feedback (DONE)
-5. **Implement window.solana provider** - Enable dApp connections (HIGH PRIORITY)
-6. **Site-bound burner system** - Core privacy feature (HIGH PRIORITY)
-7. **Add error toast notifications** - Better user feedback (QUICK WIN)
+5. ✅ **Implement window.solana provider** - Enable dApp connections (DONE - Connection & Message Signing)
+6. **Transaction signing** - Add signTransaction and signAllTransactions support (HIGH PRIORITY)
+7. **Site-bound burner system** - Core privacy feature (MEDIUM PRIORITY)
+8. **Add error toast notifications** - Better user feedback (QUICK WIN)

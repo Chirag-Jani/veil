@@ -56,6 +56,21 @@
   - Unlock button
   - 300ms delay before unlock for better UX
 
+- **`ConnectionApproval.tsx`** - Connection approval modal
+  - Compact, full-width design for extension popup
+  - Site origin display
+  - Wallet address preview
+  - Permission list
+  - Approve/Reject buttons
+
+- **`SignApproval.tsx`** - Sign message approval modal
+  - Compact, full-width design for extension popup
+  - Site origin display
+  - Message preview
+  - Wallet address being used
+  - Warning message
+  - Approve/Reject buttons
+
 - **`DepositModal.tsx`** - Deposit funds to Privacy Cash modal (fully functional and tested ✅)
   - Amount input with MAX button
   - Available balance display
@@ -105,11 +120,14 @@
 - **`storage.ts`** - Chrome storage management
   - Burner wallet CRUD operations
   - Connected sites management
+  - Pending connection request management
+  - Pending sign request management
+  - Connection and sign approval result storage
   - Address formatting utilities
   - Sequential account number generation (Account 1, Account 2, etc.)
   - Wallet archiving/unarchiving functions
   - Get archived wallets function
-  - Type definitions (BurnerWallet, ConnectedSite)
+  - Type definitions (BurnerWallet, ConnectedSite, PendingConnectionRequest, PendingSignRequest)
 
 - **`walletLock.ts`** - Session management
   - Wallet lock/unlock state
@@ -117,10 +135,16 @@
   - Session validation and extension
 
 - **`messaging.ts`** - Extension messaging system
-  - Simplified message types (only `checkBalances` currently)
+  - Message types: `checkBalances`, `providerRequest`, `connectionApproval`, `signApproval`
   - Async message handling with TypeScript types
   - Message handlers for background/content scripts
   - Typed sendMessage and onMessageType utilities
+
+- **`solanaProvider.ts`** - Solana provider utilities
+  - Active wallet retrieval
+  - Wallet unlock status checking
+  - Message signing with active wallet
+  - Keypair derivation for signing operations
 
 - **`balanceMonitor.ts`** - Balance monitoring service
   - Monitors all burner wallets for incoming SOL deposits
@@ -155,11 +179,15 @@
   - Automatic balance checks every 30 seconds
   - Handles `checkBalances` message requests from popup
   - Returns balance updates to requesting popup
+  - Handles provider requests (connect, disconnect, signMessage, getAccount)
+  - Connection and sign approval flow management
+  - Opens extension popup for user approval
 
 - **`content.ts`** - Content script
-  - Minimal implementation
-  - Ready for future dApp provider injection
-  - No active handlers currently
+  - Injects `provider-inject.js` into page context (CSP-compliant)
+  - Bridges communication between injected provider and background script
+  - Forwards provider requests to background worker
+  - Returns responses back to injected provider
 
 ### Configuration & Polyfills
 - **`polyfills.ts`** - Browser polyfills
@@ -176,26 +204,38 @@
   - `transaction2.zkey` - Zero-knowledge key file
   - Required for Privacy Cash proof generation
 
+- **`provider-inject.js`** - Injected Solana provider script
+  - Implements `window.solana` provider interface
+  - Coexists with Phantom/Solflare via `window.solana.providers`
+  - Exposes `window.veil` as primary namespace
+  - Handles connect, disconnect, signMessage methods
+  - Message passing to content script
+  - CSP-compliant (external file, not inline)
+
 ---
 
 ## 📊 Summary
 
-**UI Files (12):**
+**UI Files (14):**
 - `App.tsx`, `popup.html`, `scripts/popup.tsx`
 - `pages/Home.tsx`, `pages/Onboarding.tsx`, `pages/History.tsx`, `pages/Settings.tsx`, `pages/ArchivedWallets.tsx`
-- `components/UnlockWallet.tsx`, `components/DepositModal.tsx`, `components/WithdrawModal.tsx`, `components/TransferModal.tsx`, `components/PrivacyScoreDisplay.tsx`
+- `components/UnlockWallet.tsx`, `components/ConnectionApproval.tsx`, `components/SignApproval.tsx`, `components/DepositModal.tsx`, `components/WithdrawModal.tsx`, `components/TransferModal.tsx`, `components/PrivacyScoreDisplay.tsx`
 
-**Logic Files (10):**
+**Logic Files (11):**
 - `utils/keyManager.ts` - Core crypto & wallet logic
 - `utils/crypto.ts` - Encryption/decryption
 - `utils/storage.ts` - Data persistence
 - `utils/walletLock.ts` - Session management
 - `utils/messaging.ts` - Extension messaging
+- `utils/solanaProvider.ts` - Solana provider utilities
 - `utils/balanceMonitor.ts` - Balance monitoring service
 - `utils/privacyCashStorage.ts` - Privacy Cash storage adapter
 - `utils/rpcManager.ts` - RPC endpoint management
 - `utils/privacyCashSigner.ts` - Transaction signer factory
 - `scripts/background.ts`, `scripts/content.ts` - Extension scripts
+
+**Provider Files:**
+- `public/provider-inject.js` - Injected Solana provider script
 
 **Configuration:**
 - `polyfills.ts` - Browser compatibility
@@ -256,3 +296,12 @@
     - Transfer/Sweep between wallets (fully functional)
     - Privacy score calculation and display
     - All operations update balances in real-time
+
+11. **dApp Provider Integration:**
+    - Provider injection via content script (CSP-compliant)
+    - `window.solana` provider implementation with coexistence support
+    - Connection flow with user approval modal
+    - Connected sites management and storage
+    - Message signing with user approval modal
+    - Auto-open extension popup for unlock/approval
+    - Transaction signing (signTransaction, signAllTransactions) - Coming soon

@@ -1,7 +1,7 @@
 // Centralized types for the extension
 
 // Message types
-export type MessageType = 'checkBalances';
+export type MessageType = 'checkBalances' | 'providerRequest' | 'connectionApproval' | 'signApproval';
 
 // Base message interface
 export interface BaseMessage {
@@ -13,8 +13,28 @@ export interface CheckBalancesMessage extends BaseMessage {
   type: 'checkBalances';
 }
 
+export interface ProviderRequestMessage extends BaseMessage {
+  type: 'providerRequest';
+  method: string;
+  params?: unknown[];
+  id: number;
+}
+
+export interface ConnectionApprovalMessage extends BaseMessage {
+  type: 'connectionApproval';
+  requestId: string;
+  approved: boolean;
+  publicKey?: string;
+}
+
+export interface SignApprovalMessage extends BaseMessage {
+  type: 'signApproval';
+  requestId: string;
+  approved: boolean;
+}
+
 // Union type for all messages
-export type ExtensionMessage = CheckBalancesMessage;
+export type ExtensionMessage = CheckBalancesMessage | ProviderRequestMessage | ConnectionApprovalMessage | SignApprovalMessage;
 
 // Response types
 export interface BalanceUpdate {
@@ -29,8 +49,18 @@ export interface CheckBalancesResponse {
   error?: string;
 }
 
+export interface ProviderResponse {
+  success: boolean;
+  result?: unknown;
+  error?: {
+    code: number;
+    message: string;
+    data?: unknown;
+  };
+}
+
 // Union type for all responses
-export type ExtensionResponse = CheckBalancesResponse;
+export type ExtensionResponse = CheckBalancesResponse | ProviderResponse;
 
 // Message handler type
 // Note: chrome namespace is available globally when @types/chrome is installed

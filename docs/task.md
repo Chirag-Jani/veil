@@ -70,27 +70,37 @@
 - [x] Address validation and formatting
 - [x] SOL transfer functionality with improved error handling
 - [x] Non-blocking transaction confirmation with timeout handling
-- [ ] Transaction building and local signing (for dApp interactions)
+- [x] Message signing for dApp interactions (signMessage with approval)
+- [ ] Transaction building and local signing (signTransaction, signAllTransactions - Coming soon)
 
 ---
 
 ## Milestone 3: Extension Provider & dApp Integration
 
-### Provider Injection
-- [ ] Implement `window.solana` provider proxy injection
-- [ ] Content script to inject provider on page load
-- [ ] Provider API compatibility (connect, disconnect, signTransaction, etc.)
+### Provider Injection ✅
+- [x] Implement `window.solana` provider proxy injection (coexists with Phantom/Solflare via `window.solana.providers`)
+- [x] Content script to inject provider on page load
+- [x] Provider API compatibility (connect, disconnect, signMessage)
+- [x] Provider exposed as `window.veil` and registered in `window.solana.providers`
 
-### Connection Flow
-- [ ] dApp connection request handling
-- [ ] Site-specific burner wallet selection/generation
-- [ ] Permission management per site
-- [ ] Connection state persistence
+### Connection Flow ✅
+- [x] dApp connection request handling
+- [x] Connection approval modal (user must approve each connection)
+- [x] Connected sites management and storage
+- [x] Connection state persistence
+- [x] Auto-open extension popup for unlock/approval
+- [ ] Site-specific burner wallet selection/generation (deferred - currently uses active wallet)
+
+### Message Signing ✅
+- [x] Message signing with user approval required
+- [x] Sign approval modal with message preview
+- [x] Secure message signing flow (signMessage fully functional)
+- [ ] Transaction signing (signTransaction, signAllTransactions) - Coming soon
 
 ### Message Passing ✅
 - [x] Content script ↔ Background service worker communication (messaging system ready)
-- [x] Popup ↔ Background service worker communication (balance check messages)
-- [ ] Secure message signing flow (for dApp transactions)
+- [x] Popup ↔ Background service worker communication (balance check messages, provider requests)
+- [x] Provider request handling (connect, disconnect, signMessage, getAccount)
 
 ---
 

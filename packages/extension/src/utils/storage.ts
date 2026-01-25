@@ -21,6 +21,27 @@ export interface ConnectedSite {
   favicon: string;
   connected: boolean;
   burnerIndex?: number; // Associated burner wallet index
+  connectedAt?: number; // Timestamp when connected
+}
+
+export interface PendingConnectionRequest {
+  id: string;
+  origin: string;
+  favicon?: string;
+  requestedAt: number;
+}
+
+export interface PendingSignRequest {
+  id: string;
+  origin: string;
+  type: 'transaction' | 'message' | 'allTransactions';
+  data: {
+    transaction?: number[]; // Serialized transaction
+    transactions?: number[][]; // For signAllTransactions
+    message?: number[]; // Message bytes
+    display?: string; // Display format for message
+  };
+  requestedAt: number;
 }
 
 /**
@@ -53,7 +74,19 @@ export async function storeBurnerWallet(wallet: BurnerWallet): Promise<void> {
  * Get all burner wallets (excluding archived)
  */
 export async function getAllBurnerWallets(): Promise<BurnerWallet[]> {
+  // Defensive check for chrome.storage availability
+  if (!chrome?.storage?.local) {
+    console.error("[Storage] chrome.storage.local is not available");
+    return [];
+  }
+  
   const allData = await chrome.storage.local.get(null);
+  
+  if (!allData || typeof allData !== 'object') {
+    console.error("[Storage] Invalid storage data");
+    return [];
+  }
+  
   const wallets: BurnerWallet[] = [];
 
   for (const [key, value] of Object.entries(allData)) {
@@ -153,6 +186,9 @@ export async function getNextAccountNumber(): Promise<number> {
  * Store connected site
  */
 export async function storeConnectedSite(site: ConnectedSite): Promise<void> {
+  if (!chrome?.storage?.local) {
+    throw new Error("chrome.storage.local is not available");
+  }
   const key = `veil:site:${site.domain}`;
   await chrome.storage.local.set({ [key]: site });
 }
@@ -177,9 +213,13 @@ export async function getAllConnectedSites(): Promise<ConnectedSite[]> {
  * Get connected site by domain
  */
 export async function getConnectedSite(domain: string): Promise<ConnectedSite | null> {
+  if (!chrome?.storage?.local) {
+    console.error("[Storage] chrome.storage.local is not available");
+    return null;
+  }
   const key = `veil:site:${domain}`;
   const result = await chrome.storage.local.get(key);
-  return result[key] || null;
+  return result?.[key] || null;
 }
 
 /**
@@ -187,6 +227,181 @@ export async function getConnectedSite(domain: string): Promise<ConnectedSite | 
  */
 export async function removeConnectedSite(domain: string): Promise<void> {
   const key = `veil:site:${domain}`;
+  await chrome.storage.local.remove(key);
+}
+
+/**
+ * Check if a site is connected
+ */
+export async function isSiteConnected(domain: string): Promise<boolean> {
+  const site = await getConnectedSite(domain);
+  return site?.connected ?? false;
+}
+
+/**
+ * Store pending connection request
+ */
+export async function storePendingConnection(request: PendingConnectionRequest): Promise<void> {
+  if (!chrome?.storage?.local) {
+    throw new Error("chrome.storage.local is not available");
+  }
+  const key = `veil:pending_connection:${request.id}`;
+  await chrome.storage.local.set({ [key]: request });
+}
+
+/**
+ * Get pending connection request
+ */
+export async function getPendingConnection(id: string): Promise<PendingConnectionRequest | null> {
+  const key = `veil:pending_connection:${id}`;
+  const result = await chrome.storage.local.get(key);
+  return result[key] || null;
+}
+
+/**
+ * Get all pending connection requests
+ */
+export async function getAllPendingConnections(): Promise<PendingConnectionRequest[]> {
+  const allData = await chrome.storage.local.get(null);
+  const requests: PendingConnectionRequest[] = [];
+
+  for (const [key, value] of Object.entries(allData)) {
+    if (key.startsWith('veil:pending_connection:')) {
+      requests.push(value as PendingConnectionRequest);
+    }
+  }
+
+  return requests.sort((a, b) => b.requestedAt - a.requestedAt);
+}
+
+/**
+ * Remove pending connection request
+ */
+export async function removePendingConnection(id: string): Promise<void> {
+  const key = `veil:pending_connection:${id}`;
+  await chrome.storage.local.remove(key);
+}
+
+/**
+ * Store connection approval result
+ */
+export async function storeConnectionApproval(id: string, approved: boolean, publicKey?: string): Promise<void> {
+  if (!chrome?.storage?.local) {
+    throw new Error("chrome.storage.local is not available");
+  }
+  if (!id) {
+    throw new Error("Connection request ID is required");
+  }
+  const key = `veil:connection_result:${id}`;
+  console.log("[Storage] Storing connection approval:", { id, approved, publicKey });
+  await chrome.storage.local.set({ [key]: { approved, publicKey, timestamp: Date.now() } });
+}
+
+/**
+ * Get connection approval result
+ */
+export async function getConnectionApproval(id: string): Promise<{ approved: boolean; publicKey?: string } | null> {
+  if (!chrome?.storage?.local) {
+    console.error("[Storage] chrome.storage.local is not available");
+    return null;
+  }
+  
+  const key = `veil:connection_result:${id}`;
+  const result = await chrome.storage.local.get(key);
+  return result?.[key] || null;
+}
+
+/**
+ * Remove connection approval result
+ */
+export async function removeConnectionApproval(id: string): Promise<void> {
+  const key = `veil:connection_result:${id}`;
+  await chrome.storage.local.remove(key);
+}
+
+/**
+ * Store pending sign request
+ */
+export async function storePendingSignRequest(request: PendingSignRequest): Promise<void> {
+  if (!chrome?.storage?.local) {
+    throw new Error("chrome.storage.local is not available");
+  }
+  const key = `veil:pending_sign:${request.id}`;
+  await chrome.storage.local.set({ [key]: request });
+}
+
+/**
+ * Get pending sign request
+ */
+export async function getPendingSignRequest(id: string): Promise<PendingSignRequest | null> {
+  if (!chrome?.storage?.local) {
+    console.error("[Storage] chrome.storage.local is not available");
+    return null;
+  }
+  const key = `veil:pending_sign:${id}`;
+  const result = await chrome.storage.local.get(key);
+  return result?.[key] || null;
+}
+
+/**
+ * Get all pending sign requests
+ */
+export async function getAllPendingSignRequests(): Promise<PendingSignRequest[]> {
+  if (!chrome?.storage?.local) {
+    return [];
+  }
+  const allData = await chrome.storage.local.get(null);
+  const requests: PendingSignRequest[] = [];
+
+  for (const [key, value] of Object.entries(allData)) {
+    if (key.startsWith('veil:pending_sign:')) {
+      requests.push(value as PendingSignRequest);
+    }
+  }
+
+  return requests.sort((a, b) => b.requestedAt - a.requestedAt);
+}
+
+/**
+ * Remove pending sign request
+ */
+export async function removePendingSignRequest(id: string): Promise<void> {
+  const key = `veil:pending_sign:${id}`;
+  await chrome.storage.local.remove(key);
+}
+
+/**
+ * Store sign approval result
+ */
+export async function storeSignApproval(id: string, approved: boolean): Promise<void> {
+  if (!chrome?.storage?.local) {
+    throw new Error("chrome.storage.local is not available");
+  }
+  if (!id) {
+    throw new Error("Sign request ID is required");
+  }
+  const key = `veil:sign_result:${id}`;
+  await chrome.storage.local.set({ [key]: { approved, timestamp: Date.now() } });
+}
+
+/**
+ * Get sign approval result
+ */
+export async function getSignApproval(id: string): Promise<{ approved: boolean } | null> {
+  if (!chrome?.storage?.local) {
+    console.error("[Storage] chrome.storage.local is not available");
+    return null;
+  }
+  const key = `veil:sign_result:${id}`;
+  const result = await chrome.storage.local.get(key);
+  return result?.[key] || null;
+}
+
+/**
+ * Remove sign approval result
+ */
+export async function removeSignApproval(id: string): Promise<void> {
+  const key = `veil:sign_result:${id}`;
   await chrome.storage.local.remove(key);
 }
 

@@ -50,10 +50,12 @@ Each burner wallet is:
 
 ## Website Connection Flow
 
-1. **Injection:** Extension injects `window.solana` as a provider proxy.
+1. **Injection:** Extension injects `window.solana` as a provider proxy (coexists with other wallets via `window.solana.providers`).
 2. **Isolation:** dApps only ever see a burner wallet, never the master wallet.
-3. **Local Signing:** All transaction signing happens locally inside the extension.
-4. **No Exposure:** Private keys never leave the device.
+3. **Connection Approval:** Users must explicitly approve each site connection with a confirmation modal.
+4. **Message Signing:** Message signing is supported with user approval required for each request.
+5. **Transaction Signing:** Coming soon - transaction signing will be added in a future update.
+6. **No Exposure:** Private keys never leave the device.
 
 ---
 
@@ -127,10 +129,41 @@ Each burner wallet is:
 
 ---
 
+## Current Features
+
+✅ **Wallet Management**
+- Master seed encryption and storage
+- Deterministic burner wallet generation
+- Wallet unlock/lock with session management
+- Multiple burner wallet support
+
+✅ **dApp Integration**
+- `window.solana` provider injection (coexists with Phantom/Solflare)
+- Site connection with approval flow
+- Connected sites management
+- Message signing with user approval
+- Connection/disconnection handling
+
+✅ **Privacy Cash Integration**
+- Deposit funds to Privacy Cash (fully tested ✅)
+- Withdraw funds from Privacy Cash (fully tested ✅)
+- Private balance display
+- Toggle Privacy Cash mode in settings
+
+✅ **Balance & Monitoring**
+- Real-time balance monitoring (configurable interval)
+- Automatic balance updates
+- SOL/USD price fetching
+- Transaction history tracking
+
+⏳ **Coming Soon**
+- Transaction signing (signTransaction, signAllTransactions)
+- Enhanced transaction preview and analysis
+
 ## Tech Stack
 
 - **Frontend:** React, Vite, TailwindCSS, Framer Motion
-- **Crypto:** BIP39, Ed25519, HD wallet derivation
+- **Crypto:** BIP39, Ed25519, HD wallet derivation, tweetnacl
 - **Blockchain:** Solana Web3.js
 - **Extension:** Chrome Manifest V3, Service Workers
 - **Privacy:** Privacy Cash SDK integration (Deposit & Withdraw fully functional and tested ✅)
