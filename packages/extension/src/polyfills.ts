@@ -5,6 +5,29 @@ import { Buffer } from 'buffer';
 import * as cryptoBrowserify from 'crypto-browserify';
 import process from 'process';
 
+// Create CommonJS module polyfills FIRST (before any modules try to use them)
+// This prevents "exports is not defined" errors
+const exportsPolyfill: Record<string, unknown> = {};
+const modulePolyfill = {
+  exports: exportsPolyfill,
+  id: '',
+  filename: '',
+  loaded: true,
+  parent: null,
+  children: [],
+  paths: [],
+};
+
+// Set CommonJS globals immediately
+if (typeof window !== 'undefined') {
+  (window as unknown as Record<string, unknown>).exports = exportsPolyfill;
+  (window as unknown as Record<string, unknown>).module = modulePolyfill;
+}
+if (typeof globalThis !== 'undefined') {
+  (globalThis as unknown as Record<string, unknown>).exports = exportsPolyfill;
+  (globalThis as unknown as Record<string, unknown>).module = modulePolyfill;
+}
+
 // Create a global process object with common properties
 const processPolyfill = {
   ...process,

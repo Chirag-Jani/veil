@@ -2,10 +2,12 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowRight, Check, Copy, Eye, EyeOff } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { generateMnemonic, mnemonicToSeed, storeEncryptedSeed, validateMnemonic } from '../utils/keyManager';
+import { generateMnemonic, mnemonicToSeed, privateKeyToKeypair, privateKeyToSeed, setImportTypeSeed, storeEncryptedSeed, storeImportedPrivateKey, validateMnemonic, validatePrivateKey } from '../utils/keyManager';
+import { formatAddress, getAddressFromKeypair, storeBurnerWallet, type BurnerWallet } from '../utils/storage';
 import { unlockWallet } from '../utils/walletLock';
 
 type OnboardingStep = 'welcome' | 'create' | 'restore' | 'password';
+type RestoreType = 'seedPhrase' | 'privateKey';
 
 const Onboarding = () => {
   const navigate = useNavigate();
@@ -20,6 +22,8 @@ const Onboarding = () => {
   const [passwordError, setPasswordError] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
+  const [restoreType, setRestoreType] = useState<RestoreType>('seedPhrase');
+  const [privateKeyInput, setPrivateKeyInput] = useState('');
 
   // Generate mnemonic when entering create step
   useEffect(() => {
@@ -49,6 +53,7 @@ const Onboarding = () => {
     try {
       const seed = await mnemonicToSeed(mnemonic);
       await storeEncryptedSeed(seed, password);
+      await setImportTypeSeed(); // Mark as seed-based wallet
       await unlockWallet();
       
       // Store password temporarily in sessionStorage for first burner generation
@@ -65,21 +70,37 @@ const Onboarding = () => {
   };
 
   const handleRestore = async () => {
-    const words = restoreInput.trim().split(/\s+/);
-    if (words.length !== 12) {
-      setRestoreError('Please enter exactly 12 words');
-      return;
-    }
+    if (restoreType === 'seedPhrase') {
+      const words = restoreInput.trim().split(/\s+/);
+      if (words.length !== 12) {
+        setRestoreError('Please enter exactly 12 words');
+        return;
+      }
 
-    const mnemonicPhrase = words.join(' ');
-    if (!validateMnemonic(mnemonicPhrase)) {
-      setRestoreError('Invalid seed phrase. Please check your words.');
-      return;
-    }
+      const mnemonicPhrase = words.join(' ');
+      if (!validateMnemonic(mnemonicPhrase)) {
+        setRestoreError('Invalid seed phrase. Please check your words.');
+        return;
+      }
 
-    setMnemonic(mnemonicPhrase);
-    setStep('password');
-    setRestoreError('');
+      setMnemonic(mnemonicPhrase);
+      setStep('password');
+      setRestoreError('');
+    } else {
+      // Private key restore
+      if (!privateKeyInput.trim()) {
+        setRestoreError('Please enter your private key');
+        return;
+      }
+
+      if (!validatePrivateKey(privateKeyInput)) {
+        setRestoreError('Invalid private key. Accepts base58 string or byte array format.');
+        return;
+      }
+
+      setStep('password');
+      setRestoreError('');
+    }
   };
 
   const handleRestoreWallet = async () => {
@@ -94,9 +115,39 @@ const Onboarding = () => {
 
     setIsRestoring(true);
     try {
-      const seed = await mnemonicToSeed(mnemonic);
-      await storeEncryptedSeed(seed, password);
+      let seed: Uint8Array;
+      
+      if (restoreType === 'seedPhrase') {
+        seed = await mnemonicToSeed(mnemonic);
+        await storeEncryptedSeed(seed, password);
+        await setImportTypeSeed(); // Mark as seed-based wallet
+      } else {
+        // Private key import: store both the seed (for burners) and original keypair
+        seed = privateKeyToSeed(privateKeyInput);
+        await storeEncryptedSeed(seed, password);
+        await storeImportedPrivateKey(privateKeyInput, password); // Store original keypair
+        
+        // Create wallet entry for index 0 (the imported wallet)
+        const importedKeypair = privateKeyToKeypair(privateKeyInput);
+        const address = getAddressFromKeypair(importedKeypair);
+        
+        const importedWallet: BurnerWallet = {
+          id: Date.now(),
+          address: formatAddress(address),
+          fullAddress: address,
+          balance: 0, // Will be updated by balance monitor
+          site: 'Imported Wallet',
+          isActive: true,
+          index: 0,
+        };
+        
+        await storeBurnerWallet(importedWallet);
+      }
+      
       await unlockWallet();
+      
+      // Store password temporarily for first burner generation (or for imported wallet balance check)
+      sessionStorage.setItem('veil:temp_password', password);
       
       navigate('/home');
     } catch (error) {
@@ -256,20 +307,62 @@ const Onboarding = () => {
             <div className="text-center">
               <h2 className="text-xl font-bold text-white">Restore Wallet</h2>
               <p className="text-gray-400 text-sm mt-2">
-                Enter your 12-word seed phrase to restore your wallet and burner history.
+                Import using your seed phrase or private key.
               </p>
             </div>
 
-            <div>
-              <textarea
-                value={restoreInput}
-                onChange={(e) => {
-                  setRestoreInput(e.target.value);
+            {/* Restore Type Tabs */}
+            <div className="flex bg-white/5 rounded-lg p-1 border border-white/10">
+              <button
+                onClick={() => {
+                  setRestoreType('seedPhrase');
                   setRestoreError('');
                 }}
-                placeholder="Enter your 12-word seed phrase..."
-                className="w-full h-32 bg-white/5 border border-white/10 rounded-xl p-4 text-sm text-gray-300 font-mono placeholder-gray-600 focus:outline-none focus:border-white/20 transition-colors resize-none"
-              />
+                className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-all ${
+                  restoreType === 'seedPhrase'
+                    ? 'bg-white/10 text-white'
+                    : 'text-gray-500 hover:text-gray-300'
+                }`}
+              >
+                Seed Phrase
+              </button>
+              <button
+                onClick={() => {
+                  setRestoreType('privateKey');
+                  setRestoreError('');
+                }}
+                className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-all ${
+                  restoreType === 'privateKey'
+                    ? 'bg-white/10 text-white'
+                    : 'text-gray-500 hover:text-gray-300'
+                }`}
+              >
+                Private Key
+              </button>
+            </div>
+
+            <div>
+              {restoreType === 'seedPhrase' ? (
+                <textarea
+                  value={restoreInput}
+                  onChange={(e) => {
+                    setRestoreInput(e.target.value);
+                    setRestoreError('');
+                  }}
+                  placeholder="Enter your 12-word seed phrase..."
+                  className="w-full h-32 bg-white/5 border border-white/10 rounded-xl p-4 text-sm text-gray-300 font-mono placeholder-gray-600 focus:outline-none focus:border-white/20 transition-colors resize-none"
+                />
+              ) : (
+                <textarea
+                  value={privateKeyInput}
+                  onChange={(e) => {
+                    setPrivateKeyInput(e.target.value);
+                    setRestoreError('');
+                  }}
+                  placeholder="Enter private key (base58 or byte array)..."
+                  className="w-full h-32 bg-white/5 border border-white/10 rounded-xl p-4 text-sm text-gray-300 font-mono placeholder-gray-600 focus:outline-none focus:border-white/20 transition-colors resize-none"
+                />
+              )}
               {restoreError && (
                 <p className="text-red-400 text-xs mt-2">{restoreError}</p>
               )}
@@ -278,9 +371,9 @@ const Onboarding = () => {
             <div className="space-y-3">
               <button
                 onClick={handleRestore}
-                disabled={!restoreInput.trim()}
+                disabled={restoreType === 'seedPhrase' ? !restoreInput.trim() : !privateKeyInput.trim()}
                 className={`w-full py-3.5 px-4 font-semibold rounded-xl transition-all ${
-                  restoreInput.trim()
+                  (restoreType === 'seedPhrase' ? restoreInput.trim() : privateKeyInput.trim())
                     ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white hover:from-blue-500 hover:to-blue-400 shadow-lg shadow-blue-500/20'
                     : 'bg-white/10 text-gray-500 cursor-not-allowed'
                 }`}
@@ -298,7 +391,9 @@ const Onboarding = () => {
 
             <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-3">
               <p className="text-xs text-yellow-500/80 text-center">
-                ⚠️ Never share your seed phrase. Veil will never ask for it.
+                {restoreType === 'seedPhrase' 
+                  ? "⚠️ Never share your seed phrase. Veil will never ask for it."
+                  : "⚠️ Never share your private key. Keep it secure."}
               </p>
             </div>
           </motion.div>
@@ -356,7 +451,10 @@ const Onboarding = () => {
             <div className="space-y-3">
               <button
                 onClick={() => {
-                  if (mnemonic) {
+                  // If we have mnemonic from create flow (not restore), use create flow
+                  // Otherwise it's a restore flow (seed phrase or private key)
+                  const isCreateFlow = mnemonic && !restoreInput && !privateKeyInput;
+                  if (isCreateFlow) {
                     handleCreateWallet();
                   } else {
                     handleRestoreWallet();
@@ -374,7 +472,10 @@ const Onboarding = () => {
 
               <button
                 onClick={() => {
-                  setStep(mnemonic && restoreInput ? 'restore' : 'create');
+                  // Go back to restore if we came from there (either seed phrase or private key)
+                  const isRestoreFlow = (restoreType === 'seedPhrase' && restoreInput) || 
+                                       (restoreType === 'privateKey' && privateKeyInput);
+                  setStep(isRestoreFlow ? 'restore' : 'create');
                   setPassword('');
                   setConfirmPassword('');
                   setPasswordError('');

@@ -59,8 +59,16 @@ Each burner wallet is:
 
 ## Funds Handling
 
-- Incoming SOL shown in the extension.
-- User can **manually migrate funds** to **Privacy Cash** for unlinkable on-chain privacy.
+- **Automatic Balance Monitoring:** Background service worker monitors all burner wallets for incoming SOL deposits (configurable interval, default: 30 seconds).
+- **Real-time Updates:** Wallet balances automatically update when new SOL arrives.
+- **Privacy Cash Integration (Optional):** 
+  - **Toggle in Settings:** Privacy Cash mode can be enabled/disabled via Settings (default: disabled, normal wallet mode)
+  - **When Enabled:**
+    - **Deposit:** Move funds from burner wallets to Privacy Cash for unlinkable on-chain privacy
+    - **Withdraw:** Move funds from Privacy Cash back to any wallet address
+    - **Private Balance:** Display of private balance from Privacy Cash UTXOs
+  - **When Disabled (Default):** Normal wallet mode - shows regular SOL balance, no Privacy Cash features
+- **Transfer/Sweep:** Transfer SOL between wallets or sweep all funds to another address
 - No forced mixing — user-controlled flow.
 
 ---
@@ -123,7 +131,19 @@ Each burner wallet is:
 - **Crypto:** BIP39, Ed25519, HD wallet derivation
 - **Blockchain:** Solana Web3.js
 - **Extension:** Chrome Manifest V3, Service Workers
-- **Privacy:** Privacy Cash SDK integration
+- **Privacy:** Privacy Cash SDK integration (Deposit & Withdraw fully functional)
+- **Monitoring:** Background balance monitoring service (configurable interval)
+- **History:** Complete transaction history tracking and display
+- **Error Handling:** Centralized error handler with user-friendly messages
+
+## Configuration
+
+- **Environment Variables:** `.env` file in `packages/extension/`
+  - `VITE_SOLANA_RPCS` - Comma-separated list of Solana RPC endpoints for rotation
+    - Example: `VITE_SOLANA_RPCS=https://api.mainnet-beta.solana.com,https://solana-api.projectserum.com`
+  - `VITE_BALANCE_CHECK_INTERVAL_MS` - Balance monitoring interval in milliseconds (default: 30000 = 30 seconds)
+    - Minimum: 5000 (5 seconds), Maximum: 300000 (5 minutes)
+    - Example: `VITE_BALANCE_CHECK_INTERVAL_MS=60000` (check every minute)
 
 ---
 

@@ -10,7 +10,7 @@
     "dev": "npm run dev --workspace=@veil/extension & npm run dev --workspace=@veil/web",
     "dev:extension": "npm run dev --workspace=@veil/extension",
     "dev:web": "npm run dev --workspace=@veil/web",
-    "build": "npm run build --workspaces",
+    "build": "npm run build --workspace=@veil/extension",
     "build:extension": "npm run build --workspace=@veil/extension",
     "build:web": "npm run build --workspace=@veil/web",
     "lint": "npm run lint --workspaces",

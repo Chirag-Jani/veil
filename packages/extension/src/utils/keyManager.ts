@@ -5,6 +5,7 @@
 
 import { Keypair } from '@solana/web3.js';
 import * as bip39 from 'bip39';
+import bs58 from 'bs58';
 import englishWordlist from 'bip39/src/wordlists/english.json';
 import { decrypt, encrypt } from './crypto';
 
@@ -14,6 +15,7 @@ import * as ed25519HdKeyModule from 'ed25519-hd-key';
 // Extract derivePath - handle CommonJS exports
 const getDerivePath = () => {
   // CommonJS modules often export as default or as namespace
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mod = ed25519HdKeyModule as any;
   
   // Try different access patterns
@@ -63,6 +65,11 @@ const STORAGE_KEYS = {
   ENCRYPTED_IV: 'veil:encrypted_iv',
   BURNER_INDEX: 'veil:burner_index',
   RETIRED_BURNERS: 'veil:retired_burners',
+  // For private key imports - stores the original secret key
+  IMPORTED_PRIVATE_KEY: 'veil:imported_private_key',
+  IMPORTED_PK_SALT: 'veil:imported_pk_salt',
+  IMPORTED_PK_IV: 'veil:imported_pk_iv',
+  IMPORT_TYPE: 'veil:import_type', // 'seed' or 'privateKey'
 } as const;
 
 /**
@@ -77,6 +84,144 @@ export function generateMnemonic(): string {
  */
 export function validateMnemonic(mnemonic: string): boolean {
   return bip39.validateMnemonic(mnemonic, englishWordlist);
+}
+
+/**
+ * Validate a private key (base58 or byte array format)
+ * Solana private keys are 64 bytes (32 seed + 32 public key)
+ * or 32 bytes (seed only)
+ */
+export function validatePrivateKey(privateKey: string): boolean {
+  try {
+    const trimmed = privateKey.trim();
+    
+    // Try to parse as JSON array (byte array format from Phantom export)
+    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+      const bytes = JSON.parse(trimmed);
+      if (!Array.isArray(bytes)) return false;
+      // Accept 64 bytes (full keypair) or 32 bytes (seed only)
+      return bytes.length === 64 || bytes.length === 32;
+    }
+    
+    // Try to parse as base58 string (Phantom export format)
+    const decoded = bs58.decode(trimmed);
+    return decoded.length === 64 || decoded.length === 32;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Convert private key string to Keypair
+ */
+export function privateKeyToKeypair(privateKey: string): Keypair {
+  const trimmed = privateKey.trim();
+  
+  // Try to parse as JSON array (byte array format)
+  if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+    const bytes = JSON.parse(trimmed);
+    const secretKey = new Uint8Array(bytes);
+    return Keypair.fromSecretKey(secretKey);
+  }
+  
+  // Parse as base58 string (Phantom export format)
+  const decoded = bs58.decode(trimmed);
+  return Keypair.fromSecretKey(new Uint8Array(decoded));
+}
+
+/**
+ * Convert private key to a seed for HD derivation (for burner wallets)
+ * Uses the first 32 bytes of the secret key as seed
+ * Note: Index 0 will use the original keypair, not HD derivation
+ */
+export function privateKeyToSeed(privateKey: string): Uint8Array {
+  const keypair = privateKeyToKeypair(privateKey);
+  // Use the secret key seed (first 32 bytes) and pad to 64 bytes for HD derivation
+  const seedPart = keypair.secretKey.slice(0, 32);
+  
+  // Create a 64-byte seed by hashing/expanding the 32-byte seed
+  // This is needed for HD derivation which expects 64 bytes
+  const seed = new Uint8Array(64);
+  seed.set(seedPart, 0);
+  // For the second half, we XOR with a constant to differentiate
+  for (let i = 0; i < 32; i++) {
+    seed[32 + i] = seedPart[i] ^ 0x5c; // HMAC-style expansion
+  }
+  
+  return seed;
+}
+
+/**
+ * Store the original imported private key (encrypted)
+ * This is used to return the exact same keypair for index 0
+ */
+export async function storeImportedPrivateKey(
+  privateKey: string,
+  password: string
+): Promise<void> {
+  const keypair = privateKeyToKeypair(privateKey);
+  const secretKeyHex = uint8ArrayToHex(keypair.secretKey);
+  const { encrypted, salt, iv } = await encrypt(secretKeyHex, password);
+
+  await chrome.storage.local.set({
+    [STORAGE_KEYS.IMPORTED_PRIVATE_KEY]: encrypted,
+    [STORAGE_KEYS.IMPORTED_PK_SALT]: salt,
+    [STORAGE_KEYS.IMPORTED_PK_IV]: iv,
+    [STORAGE_KEYS.IMPORT_TYPE]: 'privateKey',
+  });
+}
+
+/**
+ * Get the imported private key keypair (for index 0)
+ */
+export async function getImportedKeypair(password: string): Promise<Keypair | null> {
+  const result = await chrome.storage.local.get([
+    STORAGE_KEYS.IMPORTED_PRIVATE_KEY,
+    STORAGE_KEYS.IMPORTED_PK_SALT,
+    STORAGE_KEYS.IMPORTED_PK_IV,
+    STORAGE_KEYS.IMPORT_TYPE,
+  ]);
+
+  if (result[STORAGE_KEYS.IMPORT_TYPE] !== 'privateKey' || !result[STORAGE_KEYS.IMPORTED_PRIVATE_KEY]) {
+    return null;
+  }
+
+  try {
+    const secretKeyHex = await decrypt(
+      result[STORAGE_KEYS.IMPORTED_PRIVATE_KEY],
+      result[STORAGE_KEYS.IMPORTED_PK_SALT],
+      result[STORAGE_KEYS.IMPORTED_PK_IV],
+      password
+    );
+    const secretKey = hexToUint8Array(secretKeyHex);
+    return Keypair.fromSecretKey(secretKey);
+  } catch (error) {
+    console.error('[Veil] Error decrypting imported keypair:', error);
+    return null;
+  }
+}
+
+/**
+ * Check if wallet was imported via private key
+ */
+export async function isPrivateKeyImport(): Promise<boolean> {
+  const result = await chrome.storage.local.get(STORAGE_KEYS.IMPORT_TYPE);
+  return result[STORAGE_KEYS.IMPORT_TYPE] === 'privateKey';
+}
+
+/**
+ * Set import type to seed (for seed phrase restores)
+ */
+export async function setImportTypeSeed(): Promise<void> {
+  await chrome.storage.local.set({
+    [STORAGE_KEYS.IMPORT_TYPE]: 'seed',
+  });
+  // Clear any stored private key
+  await chrome.storage.local.remove([
+    STORAGE_KEYS.IMPORTED_PRIVATE_KEY,
+    STORAGE_KEYS.IMPORTED_PK_SALT,
+    STORAGE_KEYS.IMPORTED_PK_IV,
+  ]);
 }
 
 /**
@@ -273,5 +418,27 @@ export function recoverBurnerKeypair(
   seed: Uint8Array,
   index: number
 ): Keypair {
+  return deriveKeypairFromSeed(seed, index);
+}
+
+/**
+ * Get keypair for a wallet index, handling private key imports correctly
+ * For private key imports: index 0 returns the imported keypair
+ * For seed imports: uses HD derivation for all indices
+ */
+export async function getKeypairForIndex(
+  password: string,
+  index: number
+): Promise<Keypair> {
+  // Check if this is a private key import and index 0
+  if (index === 0) {
+    const importedKeypair = await getImportedKeypair(password);
+    if (importedKeypair) {
+      return importedKeypair;
+    }
+  }
+  
+  // Fall back to HD derivation from seed
+  const seed = await getDecryptedSeed(password);
   return deriveKeypairFromSeed(seed, index);
 }

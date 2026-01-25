@@ -12,6 +12,15 @@
     "storage",
     "activeTab"
   ],
+  "host_permissions": [
+    "https://api.mainnet-beta.solana.com/*",
+    "https://*.alchemy.com/*",
+    "https://*.helius-rpc.com/*",
+    "https://*.solana.com/*"
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+  },
   "action": {
     "default_popup": "popup.html",
     "default_icon": {

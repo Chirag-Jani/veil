@@ -1,7 +1,7 @@
 // Centralized types for the extension
 
 // Message types
-export type MessageType = 'greeting' | 'getPageInfo';
+export type MessageType = 'checkBalances';
 
 // Base message interface
 export interface BaseMessage {
@@ -9,30 +9,28 @@ export interface BaseMessage {
 }
 
 // Specific message interfaces
-export interface GreetingMessage extends BaseMessage {
-  type: 'greeting';
-  text?: string;
-}
-
-export interface GetPageInfoMessage extends BaseMessage {
-  type: 'getPageInfo';
+export interface CheckBalancesMessage extends BaseMessage {
+  type: 'checkBalances';
 }
 
 // Union type for all messages
-export type ExtensionMessage = GreetingMessage | GetPageInfoMessage;
+export type ExtensionMessage = CheckBalancesMessage;
 
 // Response types
-export interface GreetingResponse {
-  response: string;
+export interface BalanceUpdate {
+  walletIndex: number;
+  newBalance: number;
+  previousBalance: number;
 }
 
-export interface PageInfoResponse {
-  title: string;
-  url: string;
+export interface CheckBalancesResponse {
+  success: boolean;
+  updates?: BalanceUpdate[];
+  error?: string;
 }
 
 // Union type for all responses
-export type ExtensionResponse = GreetingResponse | PageInfoResponse;
+export type ExtensionResponse = CheckBalancesResponse;
 
 // Message handler type
 // Note: chrome namespace is available globally when @types/chrome is installed

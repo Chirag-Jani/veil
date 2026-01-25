@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { deriveKeypairFromSeed, getDecryptedSeed } from '../utils/keyManager';
 import type { BurnerWallet } from '../utils/storage';
 import { getAllBurnerWallets, getArchivedBurnerWallets } from '../utils/storage';
+import { getPrivacyCashMode, setPrivacyCashMode } from '../utils/settings';
 import { lockWallet } from '../utils/walletLock';
 
 const Settings = () => {
@@ -19,19 +20,29 @@ const Settings = () => {
   const [activeWallet, setActiveWallet] = useState<BurnerWallet | null>(null);
   const [archivedWallets, setArchivedWallets] = useState<BurnerWallet[]>([]);
   const [selectedWalletForExport, setSelectedWalletForExport] = useState<BurnerWallet | null>(null);
+  const [privacyCashMode, setPrivacyCashModeState] = useState<boolean>(false);
 
-  // Load active wallet and archived wallets count on mount
+  // Load active wallet, archived wallets count, and settings on mount
   useEffect(() => {
-    const loadWallets = async () => {
+    const loadData = async () => {
       const wallets = await getAllBurnerWallets();
       const active = wallets.find(w => w.isActive) || wallets[0] || null;
       setActiveWallet(active);
       
       const archived = await getArchivedBurnerWallets();
       setArchivedWallets(archived);
+      
+      const privacyCashEnabled = await getPrivacyCashMode();
+      setPrivacyCashModeState(privacyCashEnabled);
     };
-    loadWallets();
+    loadData();
   }, []);
+
+  const handleTogglePrivacyCashMode = async () => {
+    const newValue = !privacyCashMode;
+    await setPrivacyCashMode(newValue);
+    setPrivacyCashModeState(newValue);
+  };
 
   const handleLockWallet = async () => {
     try {
@@ -129,6 +140,37 @@ const Settings = () => {
       {/* Settings Options */}
       <div className="flex-1 overflow-y-auto px-4 py-4">
         <div className="space-y-2">
+          {/* Privacy Cash Mode Toggle */}
+          <div className="w-full p-4 bg-white/5 border border-white/10 rounded-xl">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-500/20 rounded-lg">
+                  <Key className="w-5 h-5 text-blue-400" />
+                </div>
+                <div className="text-left">
+                  <p className="font-semibold text-sm">Privacy Cash Mode</p>
+                  <p className="text-xs text-gray-500">
+                    {privacyCashMode 
+                      ? 'Using Privacy Cash for private transactions' 
+                      : 'Using normal wallet mode (default)'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleTogglePrivacyCashMode}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  privacyCashMode ? 'bg-blue-600' : 'bg-gray-600'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    privacyCashMode ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+
           {/* Export Private Key */}
           <button
             onClick={() => {

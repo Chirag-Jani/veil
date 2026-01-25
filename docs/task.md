@@ -60,11 +60,11 @@
   - Balance == 0 → auto-generate new burner
 - [ ] Burner retirement system (mark retired, never reuse)
 
-### Solana Integration
-- [ ] Integrate Solana Web3.js for real account queries
-- [ ] Real-time balance checking for burner wallets
-- [ ] Address validation and formatting
-- [ ] Transaction building and local signing
+### Solana Integration ✅
+- [x] Integrate Solana Web3.js for real account queries
+- [x] Real-time balance checking for burner wallets (via balance monitor)
+- [x] Address validation and formatting
+- [ ] Transaction building and local signing (for dApp interactions)
 
 ---
 
@@ -81,30 +81,49 @@
 - [ ] Permission management per site
 - [ ] Connection state persistence
 
-### Message Passing
-- [ ] Content script ↔ Background service worker communication
-- [ ] Popup ↔ Background service worker communication
-- [ ] Secure message signing flow
+### Message Passing ✅
+- [x] Content script ↔ Background service worker communication (messaging system ready)
+- [x] Popup ↔ Background service worker communication (balance check messages)
+- [ ] Secure message signing flow (for dApp transactions)
 
 ---
 
 ## Milestone 4: Funds Management & Privacy
 
-### Balance Monitoring
-- [ ] Background monitoring for incoming SOL deposits
-- [ ] Polling RPC for burner wallet balances
+### Balance Monitoring ✅
+- [x] Background monitoring for incoming SOL deposits
+- [x] Polling RPC for burner wallet balances (every 30 seconds)
+- [x] Automatic balance updates in stored wallet data
+- [x] Real-time UI updates when balances change
+- [x] Balance monitor service with RPC rotation support
 - [ ] Push notifications for incoming funds (optional)
 
-### Manual Fund Migration
-- [ ] User-initiated sweep/drain functionality
-- [ ] Transfer UI for moving funds between wallets
-- [ ] Optional timing obfuscation (randomized delays)
+### Manual Fund Migration ✅
+- [x] User-initiated sweep/drain functionality
+- [x] Transfer UI for moving funds between wallets
+- [x] TransferModal component with sweep mode toggle
 
-### Privacy Cash Integration
-- [ ] Integrate Privacy Cash SDK
-- [ ] Manual deposit flow: Burner → Privacy Cash
-- [ ] Withdrawal flow from Privacy Cash to fresh wallet
-- [ ] Privacy score/status display
+### Privacy Cash Integration ✅
+- [x] Install Privacy Cash SDK (`privacycash` npm package)
+- [x] Copy circuit files to `public/circuit2/` (transaction2.wasm, transaction2.zkey)
+- [x] Create storage adapter (`privacyCashStorage.ts`) - chrome.storage wrapper for SDK
+- [x] Create RPC manager (`rpcManager.ts`) - rotation & failover logic
+- [x] Create signer factory (`privacyCashSigner.ts`) - per-wallet transaction signing
+- [x] Create PrivacyCash service layer (`privacyCashService.ts`) - main integration
+- [x] Create DepositModal component (UI ready)
+- [x] Create WithdrawModal component (UI ready, fully functional)
+- [x] Private balance display on Home page (real data from Privacy Cash)
+- [x] Withdrawal flow from Privacy Cash to fresh wallet (fully integrated)
+- [x] Circuit file path handling via chrome.runtime.getURL
+- [x] Automatic service initialization on wallet unlock (only when Privacy Cash mode enabled)
+- [x] Manual deposit flow: Burner → Privacy Cash (fully integrated)
+- [x] Transaction history tracking and display
+- [x] Error handling improvements
+- [x] Configurable balance monitoring
+- [x] Privacy Cash mode toggle in Settings (default: disabled, normal wallet mode)
+  - When disabled: Shows regular SOL balance, no Privacy Cash features
+  - When enabled: Shows private balance, enables deposit/withdraw features
+- [ ] Privacy score/status display (deferred for later)
 
 ---
 

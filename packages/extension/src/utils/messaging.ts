@@ -19,26 +19,6 @@ export async function sendMessage<T extends ExtensionResponse = ExtensionRespons
   });
 }
 
-/**
- * Send a message to a specific tab
- * @param tabId - The ID of the tab to send the message to
- * @param message - The message to send
- * @returns Promise that resolves with the response
- */
-export async function sendMessageToTab<T extends ExtensionResponse = ExtensionResponse>(
-  tabId: number,
-  message: ExtensionMessage
-): Promise<T> {
-  return new Promise((resolve, reject) => {
-    chrome.tabs.sendMessage(tabId, message, (response) => {
-      if (chrome.runtime.lastError) {
-        reject(new Error(chrome.runtime.lastError.message));
-        return;
-      }
-      resolve(response as T);
-    });
-  });
-}
 
 /**
  * Listen for messages
@@ -84,41 +64,28 @@ export function onMessageType<T extends ExtensionMessage>(
 ): () => void {
   return onMessage((message, sender, sendResponse) => {
     if (message.type === type) {
-      const result = handler(message as T, sender, sendResponse);
-      
-      // Handle async handlers
-      if (result instanceof Promise) {
-        result.then((response) => {
-          sendResponse(response);
-        }).catch((error) => {
-          console.error(`Error handling message type ${type}:`, error);
-        });
-        return true; // Keep channel open for async
+      try {
+        const result = handler(message as T, sender, sendResponse);
+        
+        // Handle async handlers
+        if (result instanceof Promise) {
+          result.then((response) => {
+            sendResponse(response);
+          }).catch((error) => {
+            console.error(`Error handling message type ${type}:`, error);
+            // Always send a response, even on error, to prevent port closure errors
+            sendResponse({ success: false, error: String(error) } as ExtensionResponse);
+          });
+          return true; // Keep channel open for async
+        }
+        
+        return result;
+      } catch (error) {
+        console.error(`Sync error handling message type ${type}:`, error);
+        sendResponse({ success: false, error: String(error) } as ExtensionResponse);
+        return false;
       }
-      
-      return result;
     }
     return false;
-  });
-}
-
-
-/**
- * Get the current tab ID
- * @returns Promise that resolves with the current tab ID
- */
-export async function getCurrentTabId(): Promise<number> {
-  return new Promise((resolve, reject) => {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      if (chrome.runtime.lastError) {
-        reject(new Error(chrome.runtime.lastError.message));
-        return;
-      }
-      if (tabs[0]?.id) {
-        resolve(tabs[0].id);
-      } else {
-        reject(new Error('No active tab found'));
-      }
-    });
   });
 }

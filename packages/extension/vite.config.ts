@@ -42,6 +42,21 @@ export default defineConfig({
         entryFileNames: (chunkInfo) => {
           return chunkInfo.name === 'popup' ? 'popup.js' : `${chunkInfo.name}.js`;
         },
+        // Add banner to define CommonJS globals before any code runs
+        banner: `
+          if (typeof globalThis !== 'undefined') {
+            globalThis.exports = globalThis.exports || {};
+            globalThis.module = globalThis.module || { exports: globalThis.exports };
+          }
+          if (typeof window !== 'undefined') {
+            window.exports = window.exports || {};
+            window.module = window.module || { exports: window.exports };
+          }
+          if (typeof self !== 'undefined') {
+            self.exports = self.exports || {};
+            self.module = self.module || { exports: self.exports };
+          }
+        `,
       },
     },
   },
