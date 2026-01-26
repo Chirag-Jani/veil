@@ -4,7 +4,7 @@
  * Tracks all transactions: deposits, withdrawals, transfers, and incoming SOL
  */
 
-export type TransactionType = 'deposit' | 'withdraw' | 'transfer' | 'incoming';
+export type TransactionType = 'deposit' | 'withdraw' | 'deposit_and_withdraw' | 'transfer' | 'incoming';
 
 export interface Transaction {
   id: string; // Unique transaction ID

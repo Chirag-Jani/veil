@@ -35,6 +35,13 @@ export interface WithdrawResult {
   fee_in_lamports: number;
 }
 
+export interface DepositAndWithdrawResult {
+  depositTx: string;
+  withdrawTx: string;
+  recipient: string;
+  amount_in_lamports: number;
+}
+
 class PrivacyCashService {
   private rpcManager: RPCManager | null = null;
   private currentKeypair: Keypair | null = null;
@@ -123,6 +130,7 @@ class PrivacyCashService {
 
   /**
    * Deposit SOL to Privacy Cash
+   * Includes retry logic for blockhash expiration errors
    */
   async deposit(lamports: number): Promise<DepositResult> {
     if (
@@ -141,37 +149,85 @@ class PrivacyCashService {
     const encryptionService = this.encryptionService;
     const storage = this.storage;
 
-    try {
-      const result = await this.rpcManager.executeWithRetry(
-        async (connection) => {
-          const lightWasm = await WasmFactory.getInstance();
-          const publicKey = this.getPublicKey();
-          const transactionSigner = createPrivacyCashSigner(keypair);
-          const keyBasePath = this.getCircuitBasePath();
-          // Explicitly pass signer to ensure the correct keypair is used for balance checks and transaction signing
-          const signer = keypair.publicKey;
+    console.log("[PrivacyCash] Starting deposit:", {
+      lamports,
+      publicKey: this.currentPublicKey,
+    });
 
-          return await deposit({
-            lightWasm,
-            amount_in_lamports: lamports,
-            connection,
-            encryptionService,
-            publicKey,
-            transactionSigner,
-            keyBasePath,
-            storage,
-            signer,
-          });
-        },
-      );
+    // Retry logic for blockhash expiration errors
+    // The SDK fetches blockhash early, but ZK proof generation can take time,
+    // causing the signature to expire before relay
+    const maxRetries = 3;
+    let lastError: Error | null = null;
 
-      return {
-        tx: result.tx,
-      };
-    } catch (error) {
-      console.error("[PrivacyCash] Deposit error:", error);
-      throw error;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const result = await this.rpcManager.executeWithRetry(
+          async (connection) => {
+            const lightWasm = await WasmFactory.getInstance();
+            const publicKey = this.getPublicKey();
+            const transactionSigner = createPrivacyCashSigner(keypair);
+            const keyBasePath = this.getCircuitBasePath();
+            // Explicitly pass signer to ensure the correct keypair is used for balance checks and transaction signing
+            const signer = keypair.publicKey;
+
+            console.log("[PrivacyCash] Calling deposit (attempt", attempt, ")...");
+
+            return await deposit({
+              lightWasm,
+              amount_in_lamports: lamports,
+              connection,
+              encryptionService,
+              publicKey,
+              transactionSigner,
+              keyBasePath,
+              storage,
+              signer,
+            });
+          },
+        );
+
+        console.log("[PrivacyCash] Deposit successful:", result.tx);
+        return {
+          tx: result.tx,
+        };
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        console.error(
+          `[PrivacyCash] Deposit attempt ${attempt}/${maxRetries} failed:`,
+          lastError.message,
+        );
+
+        // Check if this is a blockhash expiration error
+        const errorMessage = lastError.message.toLowerCase();
+        const isBlockhashExpired =
+          errorMessage.includes("block height exceeded") ||
+          errorMessage.includes("has expired") ||
+          (errorMessage.includes("signature") && errorMessage.includes("expired")) ||
+          errorMessage.includes("deposit relay failed") && errorMessage.includes("expired");
+
+        if (isBlockhashExpired && attempt < maxRetries) {
+          // Wait a bit before retrying to allow network to progress
+          const waitTime = attempt * 2000; // 2s, 4s, 6s
+          console.log(
+            `[PrivacyCash] Blockhash expired, retrying in ${waitTime}ms...`,
+          );
+          await new Promise((resolve) => setTimeout(resolve, waitTime));
+          continue;
+        }
+
+        // If not a blockhash error or we've exhausted retries, throw
+        console.error("[PrivacyCash] Deposit error:", lastError);
+        if (lastError instanceof Error) {
+          console.error("[PrivacyCash] Error message:", lastError.message);
+          console.error("[PrivacyCash] Error stack:", lastError.stack);
+        }
+        throw lastError;
+      }
     }
+
+    // Should never reach here, but TypeScript needs it
+    throw lastError || new Error("Deposit failed after all retries");
   }
 
   /**
@@ -285,6 +341,110 @@ class PrivacyCashService {
 
     // Should never reach here, but TypeScript needs this
     throw lastError || new Error("Withdraw failed after all retries");
+  }
+
+  /**
+   * Deposit and withdraw in one combined operation
+   * This deposits funds to Privacy Cash and immediately withdraws to recipient
+   * Returns both transaction signatures
+   */
+  async depositAndWithdraw(
+    lamports: number,
+    recipientAddress?: string,
+  ): Promise<DepositAndWithdrawResult> {
+    if (
+      !this.currentKeypair ||
+      !this.encryptionService ||
+      !this.rpcManager ||
+      !this.storage
+    ) {
+      throw new Error(
+        "Privacy Cash service not initialized. Call initialize() first.",
+      );
+    }
+
+    console.log("[PrivacyCash] Starting deposit and withdraw:", {
+      lamports,
+      recipientAddress: recipientAddress || "self",
+      publicKey: this.currentPublicKey,
+    });
+
+    try {
+      // Step 1: Deposit to Privacy Cash
+      console.log("[PrivacyCash] Step 1: Depositing to Privacy Cash...");
+      const depositResult = await this.deposit(lamports);
+      console.log("[PrivacyCash] Deposit successful:", depositResult.tx);
+
+      // Clear cache and wait for UTXOs to appear on-chain
+      await this.clearCache();
+      
+      // Wait for UTXOs to be indexed - this can take time
+      console.log("[PrivacyCash] Waiting for UTXOs to be indexed...");
+      await new Promise((resolve) => setTimeout(resolve, 5000)); // Initial wait
+
+      // Retry logic: Check if UTXOs are available before withdrawing
+      const maxRetries = 15; // Increased retries for more time
+      let retries = 0;
+      let utxosAvailable = false;
+      const expectedBalance = lamports / LAMPORTS_PER_SOL;
+      // Allow for some tolerance due to fees - check if we have at least 90% of expected amount
+      const minRequiredBalance = expectedBalance * 0.9;
+
+      while (retries < maxRetries && !utxosAvailable) {
+        try {
+          await this.clearCache();
+          const balance = await this.getPrivateBalance();
+          console.log(`[PrivacyCash] Retry ${retries + 1}/${maxRetries}: Private balance: ${balance} SOL (expected: ${expectedBalance} SOL, min required: ${minRequiredBalance} SOL)`);
+          
+          // Check if we have sufficient balance (with tolerance for fees)
+          if (balance >= minRequiredBalance) {
+            utxosAvailable = true;
+            console.log("[PrivacyCash] UTXOs are available, proceeding with withdraw");
+            break;
+          }
+          
+          // Wait before next retry (longer wait for first few retries)
+          const waitTime = retries < 3 ? 5000 : 3000; // 5s for first 3, then 3s
+          await new Promise((resolve) => setTimeout(resolve, waitTime));
+          retries++;
+        } catch (error) {
+          console.error(`[PrivacyCash] Error checking balance (retry ${retries + 1}):`, error);
+          const waitTime = retries < 3 ? 5000 : 3000;
+          await new Promise((resolve) => setTimeout(resolve, waitTime));
+          retries++;
+        }
+      }
+
+      if (!utxosAvailable) {
+        // Try to get the current balance for better error message
+        let currentBalance = 0;
+        try {
+          await this.clearCache();
+          currentBalance = await this.getPrivateBalance();
+        } catch (e) {
+          console.error("[PrivacyCash] Could not fetch balance for error message:", e);
+        }
+        
+        throw new Error(
+          `UTXOs are not yet available after deposit. Current private balance: ${currentBalance.toFixed(4)} SOL, Expected: ${expectedBalance.toFixed(4)} SOL. Please wait a moment and try withdrawing manually, or the transaction may still be processing.`
+        );
+      }
+
+      // Step 2: Withdraw from Privacy Cash to recipient
+      console.log("[PrivacyCash] Step 2: Withdrawing from Privacy Cash...");
+      const withdrawResult = await this.withdraw(lamports, recipientAddress);
+      console.log("[PrivacyCash] Withdraw successful:", withdrawResult.tx);
+
+      return {
+        depositTx: depositResult.tx,
+        withdrawTx: withdrawResult.tx,
+        recipient: withdrawResult.recipient,
+        amount_in_lamports: withdrawResult.amount_in_lamports,
+      };
+    } catch (error) {
+      console.error("[PrivacyCash] Deposit and withdraw error:", error);
+      throw error;
+    }
   }
 
   /**

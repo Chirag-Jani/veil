@@ -78,6 +78,8 @@ const History = () => {
         return "Deposit";
       case "withdraw":
         return "Withdraw";
+      case "deposit_and_withdraw":
+        return "Send Privately";
       case "transfer":
         return "Sent";
       case "incoming":
@@ -91,6 +93,8 @@ const History = () => {
         return <Shield className="w-4 h-4 text-purple-400" />;
       case "withdraw":
         return <ArrowUp className="w-4 h-4 text-blue-400" />;
+      case "deposit_and_withdraw":
+        return <Shield className="w-4 h-4 text-purple-400" />;
       case "transfer":
         return <ArrowUpRight className="w-4 h-4 text-green-400" />;
       case "incoming":
@@ -104,6 +108,8 @@ const History = () => {
         return "Deposit to Privacy";
       case "withdraw":
         return "Withdraw from Privacy";
+      case "deposit_and_withdraw":
+        return "Send Privately";
       case "transfer":
         return "Transfer";
       case "incoming":
@@ -136,7 +142,7 @@ const History = () => {
   const getNetworkFee = (tx: Transaction): number => {
     // Estimate network fee (typically ~5000 lamports = 0.000005 SOL)
     // For privacy cash transactions, fees might be higher
-    if (tx.type === "deposit" || tx.type === "withdraw") {
+    if (tx.type === "deposit" || tx.type === "withdraw" || tx.type === "deposit_and_withdraw") {
       return 0.00001; // Privacy cash operations have higher fees
     }
     return 0.000005; // Standard transfer fee
@@ -167,7 +173,7 @@ const History = () => {
 
       {/* Filters - More compact */}
       <div className="flex flex-wrap gap-1 mb-3">
-        {(["all", "deposit", "withdraw", "transfer", "incoming"] as const).map(
+        {(["all", "deposit", "withdraw", "deposit_and_withdraw", "transfer", "incoming"] as const).map(
           (filterType) => (
             <button
               key={filterType}
@@ -232,7 +238,7 @@ const History = () => {
                   </div>
                   <div className="text-right shrink-0">
                     <div className="text-[11px] font-semibold text-white">
-                      {tx.type === "withdraw" || tx.type === "transfer"
+                      {tx.type === "withdraw" || tx.type === "transfer" || tx.type === "deposit_and_withdraw"
                         ? "-"
                         : "+"}
                       {formatTransactionAmount(tx.amount)} SOL
@@ -290,7 +296,7 @@ const History = () => {
                 {/* Amount - Large Display */}
                 <div className="text-center mb-6">
                   <div className="text-2xl font-bold text-white">
-                    {selectedTx.type === "withdraw" || selectedTx.type === "transfer"
+                    {selectedTx.type === "withdraw" || selectedTx.type === "transfer" || selectedTx.type === "deposit_and_withdraw"
                       ? "-"
                       : selectedTx.type === "incoming"
                       ? "+"

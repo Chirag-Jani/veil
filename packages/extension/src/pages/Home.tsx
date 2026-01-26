@@ -8,16 +8,14 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowDownUp,
   ArrowUp,
-  ArrowUpRight,
   Check,
   ChevronDown,
   Copy,
-  DollarSign,
   Globe,
   History,
   Plus,
-  QrCode,
   RefreshCw,
+  Send,
   Settings,
   Shield,
   X,
@@ -27,6 +25,7 @@ import { useNavigate } from "react-router-dom";
 import ComingSoonModal from "../components/ComingSoonModal";
 import ConnectionApproval from "../components/ConnectionApproval";
 import DepositModal from "../components/DepositModal";
+import SendPrivatelyModal from "../components/SendPrivatelyModal";
 import SignApproval from "../components/SignApproval";
 import TransferModal from "../components/TransferModal";
 import UnlockWallet from "../components/UnlockWallet";
@@ -56,10 +55,10 @@ import {
   removeConnectedSite,
   removePendingConnection,
   removePendingSignRequest,
-  storeConnectionApproval,
-  storeSignApproval,
   storeBurnerWallet,
+  storeConnectionApproval,
   storePrivateBalance,
+  storeSignApproval,
   type BurnerWallet,
   type ConnectedSite,
   type PendingConnectionRequest,
@@ -90,6 +89,7 @@ const Home = () => {
   const [showCopyPopup, setShowCopyPopup] = useState(false);
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [showSendPrivatelyModal, setShowSendPrivatelyModal] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [showComingSoonModal, setShowComingSoonModal] = useState(false);
   const [comingSoonFeature, setComingSoonFeature] =
@@ -100,8 +100,10 @@ const Home = () => {
   const [password, setPassword] = useState(""); // Store password in memory during session
   const [privacyCashMode, setPrivacyCashMode] = useState<boolean>(false);
   const [solPrice, setSolPrice] = useState<number | null>(null); // SOL price in USD
-  const [pendingConnection, setPendingConnection] = useState<PendingConnectionRequest | null>(null);
-  const [pendingSignRequest, setPendingSignRequest] = useState<PendingSignRequest | null>(null);
+  const [pendingConnection, setPendingConnection] =
+    useState<PendingConnectionRequest | null>(null);
+  const [pendingSignRequest, setPendingSignRequest] =
+    useState<PendingSignRequest | null>(null);
   const [connectedSites, setConnectedSites] = useState<ConnectedSite[]>([]);
 
   const loadWallets = useCallback(async () => {
@@ -120,7 +122,7 @@ const Home = () => {
   const loadConnectedSites = useCallback(async () => {
     try {
       const sites = await getAllConnectedSites();
-      setConnectedSites(sites.filter(site => site.connected));
+      setConnectedSites(sites.filter((site) => site.connected));
     } catch (error) {
       console.error("[Veil] Error loading connected sites:", error);
     }
@@ -143,10 +145,14 @@ const Home = () => {
   // Handle connection approval
   const handleApproveConnection = useCallback(async () => {
     if (!pendingConnection || !activeWallet) return;
-    
+
     try {
       // Store approval result - background script will handle storing the connected site
-      await storeConnectionApproval(pendingConnection.id, true, activeWallet.fullAddress);
+      await storeConnectionApproval(
+        pendingConnection.id,
+        true,
+        activeWallet.fullAddress,
+      );
       setPendingConnection(null);
       // Reload connected sites after approval
       await loadConnectedSites();
@@ -158,7 +164,7 @@ const Home = () => {
   // Handle connection rejection
   const handleRejectConnection = useCallback(async () => {
     if (!pendingConnection) return;
-    
+
     try {
       // Store rejection result
       await storeConnectionApproval(pendingConnection.id, false);
@@ -186,7 +192,7 @@ const Home = () => {
   // Handle sign approval
   const handleApproveSign = useCallback(async () => {
     if (!pendingSignRequest) return;
-    
+
     try {
       await storeSignApproval(pendingSignRequest.id, true);
       setPendingSignRequest(null);
@@ -198,7 +204,7 @@ const Home = () => {
   // Handle sign rejection
   const handleRejectSign = useCallback(async () => {
     if (!pendingSignRequest) return;
-    
+
     try {
       await storeSignApproval(pendingSignRequest.id, false);
       await removePendingSignRequest(pendingSignRequest.id);
@@ -209,14 +215,17 @@ const Home = () => {
   }, [pendingSignRequest]);
 
   // Handle disconnecting a site
-  const handleDisconnectSite = useCallback(async (domain: string) => {
-    try {
-      await removeConnectedSite(domain);
-      await loadConnectedSites();
-    } catch (error) {
-      console.error("[Veil] Error disconnecting site:", error);
-    }
-  }, [loadConnectedSites]);
+  const handleDisconnectSite = useCallback(
+    async (domain: string) => {
+      try {
+        await removeConnectedSite(domain);
+        await loadConnectedSites();
+      } catch (error) {
+        console.error("[Veil] Error disconnecting site:", error);
+      }
+    },
+    [loadConnectedSites],
+  );
 
   const generateNewBurner = useCallback(
     async (pwd?: string) => {
@@ -335,7 +344,9 @@ const Home = () => {
         if (wallets.length === 0 && !isGenerating) {
           // Try to get password from state or sessionStorage
           const currentPassword =
-            password || sessionStorage.getItem("veil:session_password") || sessionStorage.getItem("veil:temp_password");
+            password ||
+            sessionStorage.getItem("veil:session_password") ||
+            sessionStorage.getItem("veil:temp_password");
           if (currentPassword) {
             if (!password) {
               setPassword(currentPassword); // Store in state
@@ -390,7 +401,7 @@ const Home = () => {
     if (!isLocked && activeWallet) {
       // Check immediately
       checkPendingConnections();
-      
+
       // Poll for pending connections every second
       const interval = setInterval(checkPendingConnections, 1000);
       return () => clearInterval(interval);
@@ -402,7 +413,7 @@ const Home = () => {
     if (!isLocked && activeWallet) {
       // Check immediately
       checkPendingSignRequests();
-      
+
       // Poll for pending sign requests every second
       const interval = setInterval(checkPendingSignRequests, 1000);
       return () => clearInterval(interval);
@@ -450,17 +461,21 @@ const Home = () => {
       setPassword(unlockPassword);
       // Store password in sessionStorage for persistence across component remounts
       sessionStorage.setItem("veil:session_password", unlockPassword);
-      
+
       // Store in chrome.storage for background script access
       // Use both session (preferred) and local (fallback) storage
       try {
-        await chrome.storage.session.set({ "veil:session_password": unlockPassword });
+        await chrome.storage.session.set({
+          "veil:session_password": unlockPassword,
+        });
       } catch {
         // chrome.storage.session might not be available
       }
       // Also store in local storage as fallback
-      await chrome.storage.local.set({ "veil:temp_session_password": unlockPassword });
-      
+      await chrome.storage.local.set({
+        "veil:temp_session_password": unlockPassword,
+      });
+
       setIsLocked(false);
       await loadWallets();
       await loadConnectedSites();
@@ -471,7 +486,7 @@ const Home = () => {
         // Generate burner - errors will be handled gracefully inside
         await generateNewBurner(unlockPassword);
       }
-      
+
       // Check for pending connection requests immediately
       await checkPendingConnections();
     } catch (error) {
@@ -543,7 +558,10 @@ const Home = () => {
           // Skip if already initialized for this wallet
           const currentPubKey = service.getCurrentPublicKey();
           // Use getKeypairForIndex to handle private key imports correctly
-          const keypair = await getKeypairForIndex(currentPassword, activeWalletIndex);
+          const keypair = await getKeypairForIndex(
+            currentPassword,
+            activeWalletIndex,
+          );
           const newPubKey = keypair.publicKey.toBase58();
 
           if (currentPubKey === newPubKey) {
@@ -668,7 +686,9 @@ const Home = () => {
 
     if (!currentPassword) {
       // Password not available - need to re-unlock
-      throw new Error("Session expired. Please close this dialog, unlock your wallet, and try again.");
+      throw new Error(
+        "Session expired. Please close this dialog, unlock your wallet, and try again.",
+      );
     }
 
     const txId = generateTransactionId();
@@ -722,7 +742,7 @@ const Home = () => {
       }
 
       setPrivateBalance(newPrivateBalance);
-      
+
       // Persist to storage
       await storePrivateBalance(activeWallet.index, newPrivateBalance);
 
@@ -779,7 +799,9 @@ const Home = () => {
     if (!currentPassword) {
       // Password not available - need to re-unlock
       // Just throw the error, the modal will close and user can unlock and retry
-      throw new Error("Session expired. Please close this dialog, unlock your wallet, and try again.");
+      throw new Error(
+        "Session expired. Please close this dialog, unlock your wallet, and try again.",
+      );
     }
 
     const txId = generateTransactionId();
@@ -811,7 +833,9 @@ const Home = () => {
 
       // Ensure service is initialized
       if (!service.isInitialized()) {
-        console.log("[Veil] Service not initialized, initializing for withdraw...");
+        console.log(
+          "[Veil] Service not initialized, initializing for withdraw...",
+        );
         const keypair = await getKeypairForIndex(
           currentPassword,
           activeWallet.index,
@@ -841,9 +865,9 @@ const Home = () => {
       console.log("[Veil] Refreshing private balance after withdraw...");
       const newBalance = await service.getPrivateBalance();
       console.log("[Veil] New private balance:", newBalance);
-      
+
       setPrivateBalance(newBalance);
-      
+
       // Persist to storage
       await storePrivateBalance(activeWallet.index, newBalance);
 
@@ -871,13 +895,224 @@ const Home = () => {
     }
   };
 
+  // Combined deposit and withdraw handler for streamlined private sending
+  // This is always available as a main action button (doesn't require privacy cash mode toggle)
+  const handleSendPrivately = async (
+    amount: number,
+    recipient?: string,
+  ): Promise<void> => {
+    console.log("[Veil] handleSendPrivately called with:", {
+      amount,
+      recipient,
+    });
+
+    if (!activeWallet) {
+      console.error("[Veil] No active wallet!");
+      throw new Error("No active wallet selected");
+    }
+    console.log("[Veil] Active wallet:", activeWallet.fullAddress);
+
+    // Check if wallet is actually locked
+    const walletLocked = await isWalletLocked();
+    if (walletLocked) {
+      console.error("[Veil] Wallet is locked!");
+      setIsLocked(true);
+      throw new Error("Wallet is locked. Please unlock your wallet first.");
+    }
+
+    // Try to get password from state or storage
+    let currentPassword = password;
+    console.log(
+      "[Veil] Password from state:",
+      currentPassword ? "exists" : "null",
+    );
+
+    if (!currentPassword) {
+      // Check sessionStorage first
+      const sessionPassword = sessionStorage.getItem("veil:session_password");
+      console.log(
+        "[Veil] Session password (sessionStorage):",
+        sessionPassword ? "exists" : "null",
+      );
+      if (sessionPassword) {
+        currentPassword = sessionPassword;
+        setPassword(sessionPassword);
+      } else {
+        // Check chrome.storage.session
+        try {
+          const sessionData = await chrome.storage.session.get(
+            "veil:session_password",
+          );
+          if (sessionData["veil:session_password"]) {
+            currentPassword = sessionData["veil:session_password"] as string;
+            console.log(
+              "[Veil] Session password (chrome.storage.session): exists",
+            );
+            setPassword(currentPassword);
+            // Also sync to sessionStorage for consistency
+            sessionStorage.setItem("veil:session_password", currentPassword);
+          }
+        } catch {
+          console.log("[Veil] chrome.storage.session not available");
+        }
+      }
+
+      // If still no password, check temp password in sessionStorage
+      if (!currentPassword) {
+        const tempPassword = sessionStorage.getItem("veil:temp_password");
+        console.log(
+          "[Veil] Temp password (sessionStorage):",
+          tempPassword ? "exists" : "null",
+        );
+        if (tempPassword) {
+          currentPassword = tempPassword;
+          setPassword(tempPassword);
+        }
+      }
+
+      // Final fallback: check chrome.storage.local
+      if (!currentPassword) {
+        try {
+          const localData = await chrome.storage.local.get(
+            "veil:temp_session_password",
+          );
+          if (localData["veil:temp_session_password"]) {
+            currentPassword = localData["veil:temp_session_password"] as string;
+            console.log("[Veil] Temp password (chrome.storage.local): exists");
+            setPassword(currentPassword);
+            // Also sync to sessionStorage for consistency
+            sessionStorage.setItem("veil:session_password", currentPassword);
+          }
+        } catch {
+          console.log("[Veil] chrome.storage.local not available");
+        }
+      }
+    }
+
+    if (!currentPassword) {
+      // Password not available - need to re-unlock
+      console.error("[Veil] No password available!");
+      throw new Error(
+        "Session expired. Please close this dialog, unlock your wallet, and try again.",
+      );
+    }
+    console.log("[Veil] Password obtained successfully");
+
+    const txId = generateTransactionId();
+    const privateBalanceBefore = privateBalance;
+    const toAddress = recipient || activeWallet.fullAddress;
+
+    // Record pending transaction
+    const transaction: TransactionRecord = {
+      id: txId,
+      type: "deposit_and_withdraw",
+      timestamp: Date.now(),
+      amount,
+      fromAddress: activeWallet.fullAddress,
+      toAddress,
+      walletIndex: activeWallet.index,
+      status: "pending",
+      privateBalanceBefore,
+    };
+    await storeTransaction(transaction);
+
+    try {
+      console.log("[Veil] Starting send privately:", {
+        amount,
+        recipient: recipient || activeWallet.fullAddress,
+        walletIndex: activeWallet.index,
+      });
+
+      const service = getPrivacyCashService();
+
+      // Ensure service is initialized
+      if (!service.isInitialized()) {
+        console.log("[Veil] Service not initialized, initializing...");
+        const keypair = await getKeypairForIndex(
+          currentPassword,
+          activeWallet.index,
+        );
+        await service.initialize(keypair);
+      }
+
+      // Convert SOL to lamports
+      const lamports = Math.floor(amount * LAMPORTS_PER_SOL);
+      console.log(
+        "[Veil] Sending privately",
+        lamports,
+        "lamports (",
+        amount,
+        "SOL)",
+      );
+
+      // Validate recipient address if provided
+      if (recipient) {
+        try {
+          new PublicKey(recipient);
+        } catch {
+          throw new Error(`Invalid recipient address: ${recipient}`);
+        }
+      }
+
+      // Deposit and withdraw in one operation
+      console.log("[Veil] Calling Privacy Cash depositAndWithdraw...");
+      const result = await service.depositAndWithdraw(lamports, recipient);
+      console.log("[Veil] Send privately result:", result);
+
+      // Clear cache and wait for UTXOs to be processed
+      await service.clearCache();
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+
+      // Refresh private balance
+      console.log("[Veil] Refreshing private balance...");
+      const newBalance = await service.getPrivateBalance();
+      console.log("[Veil] New private balance:", newBalance);
+
+      setPrivateBalance(newBalance);
+
+      // Persist to storage
+      await storePrivateBalance(activeWallet.index, newBalance);
+
+      // Reload wallets to update burner wallet balance
+      await loadWallets();
+
+      // Update transaction as confirmed
+      transaction.status = "confirmed";
+      transaction.signature = result.withdrawTx; // Use withdraw tx as the final transaction
+      transaction.privateBalanceAfter = newBalance;
+      await storeTransaction(transaction);
+
+      console.log("[Veil] Send privately completed successfully");
+    } catch (error) {
+      console.error("[Veil] Send privately error details:", error);
+      if (error instanceof Error) {
+        console.error("[Veil] Error message:", error.message);
+        console.error("[Veil] Error stack:", error.stack);
+      }
+      logError(error, "sending funds privately");
+
+      // Update transaction as failed
+      transaction.status = "failed";
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      transaction.error = getErrorMessage(error, "sending funds privately");
+      await storeTransaction(transaction);
+
+      // Re-throw with more context if needed
+      if (error instanceof Error) {
+        throw new Error(`Failed to send privately: ${errorMessage}`);
+      }
+      throw error;
+    }
+  };
+
   // Refresh private balance manually
   const refreshPrivateBalance = async () => {
     if (!privacyCashMode) {
       console.warn("[Veil] Privacy Cash mode is not enabled");
       return;
     }
-    
+
     if (!activeWallet) {
       console.warn("[Veil] No active wallet selected");
       return;
@@ -911,7 +1146,9 @@ const Home = () => {
 
     // If password is not available but wallet is unlocked, just reload from storage
     if (!currentPassword) {
-      console.log("[Veil] Password not available, reloading from persisted storage...");
+      console.log(
+        "[Veil] Password not available, reloading from persisted storage...",
+      );
       setIsRefreshingPrivateBalance(true);
       try {
         const storedBalance = await getStoredPrivateBalance(activeWallet.index);
@@ -933,28 +1170,33 @@ const Home = () => {
       // Ensure service is initialized
       if (!service.isInitialized()) {
         console.log("[Veil] Service not initialized, initializing now...");
-        const keypair = await getKeypairForIndex(currentPassword, activeWallet.index);
+        const keypair = await getKeypairForIndex(
+          currentPassword,
+          activeWallet.index,
+        );
         await service.initialize(keypair);
       }
 
       // Clear cache and refresh
       console.log("[Veil] Clearing cache...");
       await service.clearCache();
-      
+
       // Wait a moment for cache to clear
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
       console.log("[Veil] Fetching private balance...");
       const newBalance = await service.getPrivateBalance();
       console.log("[Veil] New balance:", newBalance);
-      
+
       setPrivateBalance(newBalance);
-      
+
       // Persist to storage
       await storePrivateBalance(activeWallet.index, newBalance);
-      
+
       if (newBalance === 0) {
-        console.warn("[Veil] Balance is still 0 after refresh. Check console for errors.");
+        console.warn(
+          "[Veil] Balance is still 0 after refresh. Check console for errors.",
+        );
       }
     } catch (error) {
       console.error("[Veil] Error refreshing private balance:", error);
@@ -1300,27 +1542,8 @@ const Home = () => {
           <p className="text-sm text-gray-400">{totalBalance.toFixed(4)} SOL</p>
         </motion.div>
 
-        {/* Action Buttons - Receive & Send */}
-        <div className="grid grid-cols-4 gap-3 mb-4">
-          <button
-            onClick={() => {
-              // Show receive address (copy functionality)
-              if (activeWallet) {
-                navigator.clipboard.writeText(activeWallet.fullAddress);
-                setShowCopyPopup(true);
-                setTimeout(() => setShowCopyPopup(false), 2000);
-              }
-            }}
-            className="flex flex-col items-center justify-center bg-white/5 border border-white/10 hover:bg-white/10 transition-colors rounded-xl"
-          >
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center">
-              <QrCode className="w-6 h-6 text-white" />
-            </div>
-            <span className="text-xs font-medium text-white mb-1.5">
-              Receive
-            </span>
-          </button>
-
+        {/* Action Buttons - Send, Send Privately, Swap */}
+        <div className="grid grid-cols-3 gap-2.5 mb-4">
           <button
             onClick={() => {
               if (activeWallet && activeWallet.balance > 0) {
@@ -1328,36 +1551,34 @@ const Home = () => {
               }
             }}
             disabled={!activeWallet || (activeWallet?.balance ?? 0) === 0}
-            className="flex flex-col items-center justify-center bg-white/5 border border-white/10 hover:bg-white/10 transition-colors rounded-xl"
+            className="group flex flex-col items-center justify-center gap-1.5 py-3 px-2 bg-gray-800/50 hover:bg-gray-700/50 transition-colors duration-150 rounded-2xl disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.97]"
           >
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center">
-              <ArrowUpRight className="w-6 h-6 text-white" />
-            </div>
-            <span className="text-xs font-medium text-white mb-1.5">Send</span>
+            <Send className="w-5 h-5 text-blue-400 group-hover:text-blue-300 transition-colors" />
+            <span className="text-xs font-medium text-white">Transfer</span>
+          </button>
+          <button
+            onClick={() => {
+              if (activeWallet && activeWallet.balance > 0) {
+                setShowSendPrivatelyModal(true);
+              }
+            }}
+            disabled={!activeWallet || (activeWallet?.balance ?? 0) === 0}
+            className="group flex flex-col items-center justify-center gap-1.5 py-3 px-2 bg-gradient-to-br from-purple-600/80 to-pink-500/80 hover:from-purple-500/90 hover:to-pink-400/90 transition-all duration-150 rounded-2xl disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.97]"
+          >
+            <Shield className="w-5 h-5 text-white" />
+            <span className="text-xs font-medium text-white text-center leading-tight">
+              Private Transfer
+            </span>
           </button>
           <button
             onClick={() => {
               setComingSoonFeature("Swap");
               setShowComingSoonModal(true);
             }}
-            className="flex flex-col items-center justify-center bg-white/5 border border-white/10 hover:bg-white/10 transition-colors rounded-xl"
+            className="group flex flex-col items-center justify-center gap-1.5 py-3 px-2 bg-gray-800/50 hover:bg-gray-700/50 transition-colors duration-150 rounded-2xl active:scale-[0.97]"
           >
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center">
-              <ArrowDownUp className="w-6 h-6 text-white" />
-            </div>
-            <span className="text-xs font-medium text-white mb-1.5">Swap</span>
-          </button>
-          <button
-            onClick={() => {
-              setComingSoonFeature("Buy");
-              setShowComingSoonModal(true);
-            }}
-            className="flex flex-col items-center justify-center bg-white/5 border border-white/10 hover:bg-white/10 transition-colors rounded-xl"
-          >
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center">
-              <DollarSign className="w-6 h-6 text-white" />
-            </div>
-            <span className="text-xs font-medium text-white mb-1.5">Buy</span>
+            <ArrowDownUp className="w-5 h-5 text-emerald-400 group-hover:text-emerald-300 transition-colors" />
+            <span className="text-xs font-medium text-white">Swap</span>
           </button>
         </div>
 
@@ -1378,7 +1599,7 @@ const Home = () => {
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
                   <img
                     src={
-                      typeof chrome !== 'undefined' && chrome.runtime
+                      typeof chrome !== "undefined" && chrome.runtime
                         ? chrome.runtime.getURL("solana.svg")
                         : "/solana.svg"
                     }
@@ -1387,12 +1608,13 @@ const Home = () => {
                     onError={(e) => {
                       // Fallback to text if image fails to load
                       const target = e.target as HTMLImageElement;
-                      target.style.display = 'none';
+                      target.style.display = "none";
                       const parent = target.parentElement;
-                      if (parent && !parent.querySelector('.fallback-text')) {
-                        const fallback = document.createElement('span');
-                        fallback.className = 'fallback-text text-white font-bold text-sm';
-                        fallback.textContent = 'SOL';
+                      if (parent && !parent.querySelector(".fallback-text")) {
+                        const fallback = document.createElement("span");
+                        fallback.className =
+                          "fallback-text text-white font-bold text-sm";
+                        fallback.textContent = "SOL";
                         parent.appendChild(fallback);
                       }
                     }}
@@ -1468,29 +1690,33 @@ const Home = () => {
         {/* Additional Actions */}
         <div className="flex flex-col gap-2 mb-2">
           {/* Privacy Cash buttons - Only show when Privacy Cash mode is enabled */}
-          {privacyCashMode && activeWallet && activeWallet.balance > 0 && (
-            <button
-              onClick={() => setShowDepositModal(true)}
-              className="py-2.5 px-4 font-medium rounded-xl text-sm flex items-center justify-center gap-2 transition-all bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:from-purple-500 hover:to-blue-500 active:scale-[0.98]"
-            >
-              <Shield className="w-4 h-4" />
-              <span>Deposit to Privacy</span>
-            </button>
-          )}
-
           {privacyCashMode && (
-            <button
-              onClick={() => setShowWithdrawModal(true)}
-              disabled={privateBalance <= 0}
-              className={`py-2.5 px-4 font-medium rounded-xl text-sm flex items-center justify-center gap-2 transition-all ${
-                privateBalance > 0
-                  ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-500 hover:to-purple-500 active:scale-[0.98]"
-                  : "bg-white/5 text-gray-500 border border-white/10 cursor-not-allowed"
-              }`}
-            >
-              <ArrowUp className="w-4 h-4" />
-              <span>Withdraw from Privacy</span>
-            </button>
+            <>
+              {/* Deposit to Privacy - Standalone */}
+              {activeWallet && activeWallet.balance > 0 && (
+                <button
+                  onClick={() => setShowDepositModal(true)}
+                  className="py-2.5 px-4 font-medium rounded-xl text-sm flex items-center justify-center gap-2 transition-all bg-white/5 border border-white/10 text-white hover:bg-white/10 active:scale-[0.98]"
+                >
+                  <Shield className="w-4 h-4" />
+                  <span>Deposit to Privacy</span>
+                </button>
+              )}
+
+              {/* Withdraw from Privacy - Standalone */}
+              <button
+                onClick={() => setShowWithdrawModal(true)}
+                disabled={privateBalance <= 0}
+                className={`py-2.5 px-4 font-medium rounded-xl text-sm flex items-center justify-center gap-2 transition-all ${
+                  privateBalance > 0
+                    ? "bg-white/5 border border-white/10 text-white hover:bg-white/10 active:scale-[0.98]"
+                    : "bg-white/5 text-gray-500 border border-white/10 cursor-not-allowed"
+                }`}
+              >
+                <ArrowUp className="w-4 h-4" />
+                <span>Withdraw from Privacy</span>
+              </button>
+            </>
           )}
 
           <button
@@ -1677,7 +1903,7 @@ const Home = () => {
                         }
                       };
                       const domainName = getDomainName(site.domain);
-                      
+
                       return (
                         <div
                           key={site.id}
@@ -1796,6 +2022,15 @@ const Home = () => {
         onClose={() => setShowWithdrawModal(false)}
         onWithdraw={handleWithdraw}
         privateBalance={privateBalance}
+        defaultRecipient={activeWallet?.fullAddress}
+      />
+
+      {/* Send Privately Modal (Combined Deposit + Withdraw) */}
+      <SendPrivatelyModal
+        isOpen={showSendPrivatelyModal}
+        onClose={() => setShowSendPrivatelyModal(false)}
+        onSendPrivately={handleSendPrivately}
+        availableBalance={activeWallet?.balance || 0}
         defaultRecipient={activeWallet?.fullAddress}
       />
 
