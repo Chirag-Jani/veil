@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { AlertTriangle, Archive, ArrowLeft, Check, Copy, Key, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { deriveKeypairFromSeed, getDecryptedSeed } from '../utils/keyManager';
+import { getKeypairForIndex } from '../utils/keyManager';
 import { getArchivedBurnerWallets, type BurnerWallet } from '../utils/storage';
 
 const ArchivedWallets = () => {
@@ -40,8 +40,9 @@ const ArchivedWallets = () => {
     setPasswordError('');
 
     try {
-      const seed = await getDecryptedSeed(password);
-      const walletKeypair = deriveKeypairFromSeed(seed, selectedWallet.index);
+      // Get keypair for the selected wallet (using its index)
+      // This handles imported wallets correctly (index 0 uses imported keypair)
+      const walletKeypair = await getKeypairForIndex(password, selectedWallet.index);
       
       const derivedPublicKey = walletKeypair.publicKey.toBase58();
       if (derivedPublicKey !== selectedWallet.fullAddress) {

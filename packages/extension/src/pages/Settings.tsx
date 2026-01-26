@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { AlertTriangle, Archive, ArrowLeft, Check, Copy, Key, Lock, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { deriveKeypairFromSeed, getDecryptedSeed } from '../utils/keyManager';
+import { getKeypairForIndex } from '../utils/keyManager';
 import type { BurnerWallet } from '../utils/storage';
 import { getAllBurnerWallets, getArchivedBurnerWallets } from '../utils/storage';
 import { getPrivacyCashMode, setPrivacyCashMode } from '../utils/settings';
@@ -65,17 +65,15 @@ const Settings = () => {
     setPasswordError('');
 
     try {
-      // Verify password by decrypting seed
-      const seed = await getDecryptedSeed(password);
-      
       if (!targetWallet) {
         setPasswordError('No wallet found');
         setPassword('');
         return;
       }
       
-      // Derive keypair for the target wallet (using its index)
-      const walletKeypair = deriveKeypairFromSeed(seed, targetWallet.index);
+      // Get keypair for the target wallet (using its index)
+      // This handles imported wallets correctly (index 0 uses imported keypair)
+      const walletKeypair = await getKeypairForIndex(password, targetWallet.index);
       
       // Verify the derived public key matches the stored address
       const derivedPublicKey = walletKeypair.publicKey.toBase58();
