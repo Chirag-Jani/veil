@@ -35,8 +35,8 @@ const securityFeatures = [
   },
   {
     icon: Shield,
-    title: 'Protocol Security',
-    description: 'Privacy Cash protocol has been audited. Your privacy depends on battle-tested cryptography.',
+    title: 'Burner Isolation',
+    description: 'Each dApp gets a unique burner wallet. No address reuse, no cross-site linking—your main wallet stays hidden.',
   },
 ];
 

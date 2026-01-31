@@ -9,9 +9,7 @@ const SETTINGS_KEYS = {
 
 /**
  * Get Privacy Cash mode setting.
- *
- * Privacy Cash mode is **ON by default** to match the "Privacy by Default"
- * positioning. We only turn it off if the user has explicitly disabled it.
+ * Optional feature for unlinkable on-chain transfers; burner wallets are the core security.
  */
 export async function getPrivacyCashMode(): Promise<boolean> {
   const result = await chrome.storage.local.get(SETTINGS_KEYS.PRIVACY_CASH_MODE);

@@ -293,7 +293,7 @@ const SendPrivatelyModal = ({
                       How it works
                     </p>
                     <p className="text-xs text-purple-400/80">
-                      Your funds will be deposited into Privacy Cash and immediately withdrawn to the recipient, 
+                      Your funds move through a privacy pool and are withdrawn to the recipient, 
                       making the transaction unlinkable on-chain. This typically takes 60-90 seconds.
                     </p>
                   </div>

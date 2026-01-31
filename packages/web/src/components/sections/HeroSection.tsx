@@ -60,8 +60,8 @@ export const HeroSection = () => {
             transition={{ duration: 0.8, delay: 0.3 }}
             className="text-lg md:text-xl text-muted-foreground max-w-2xl mb-10"
           >
-            Veil creates temporary Solana wallets for receiving payments and airdrops. 
-            Migrate funds through privacy pools to break the on-chain link to your main wallet.
+            Veil creates temporary burner wallets for each site—connect anywhere without risking your main wallet. 
+            Optional privacy pool for unlinkable transfers when you need extra privacy.
           </motion.p>
 
           {/* CTA Buttons */}

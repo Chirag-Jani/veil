@@ -397,7 +397,7 @@ const History = () => {
                   selectedTx.privateBalanceAfter !== undefined) && (
                   <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-4 mb-4">
                     <div className="text-xs text-purple-400 font-medium mb-2">
-                      Privacy Cash Balance
+                      Private Balance
                     </div>
                     {selectedTx.privateBalanceBefore !== undefined && (
                       <div className="text-xs text-gray-400 mb-1">

@@ -20,7 +20,7 @@ const steps = [
     number: '03',
     icon: ShieldCheck,
     title: 'Migrate to Privacy Pool',
-    description: 'Move your funds into the Privacy Cash protocol pool. This breaks the on-chain link between addresses.',
+    description: 'Optionally move funds into a privacy pool. This breaks the on-chain link between addresses.',
     color: 'text-primary',
   },
   {

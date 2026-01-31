@@ -180,16 +180,16 @@ export const SolutionSection = () => {
             </div>
           </div>
 
-          {/* 2. Protocol (Wide Rectangle: 4x1) */}
+          {/* 2. Site Isolation (Wide Rectangle: 4x1) */}
           <div className="group lg:col-span-4 lg:row-span-1 rounded-3xl bg-zinc-900/40 border border-white/5 p-8 relative overflow-hidden backdrop-blur-sm hover:bg-zinc-900/60 transition-colors flex flex-col md:flex-row items-center gap-8">
              <div className="flex-1 text-center md:text-left z-10">
                 <div className="inline-flex items-center gap-2 mb-3">
                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                   <span className="text-xs font-mono text-zinc-500 uppercase">Live Mixing</span>
+                   <span className="text-xs font-mono text-zinc-500 uppercase">Core Security</span>
                 </div>
-                <h3 className="text-xl font-bold text-white mb-2">Zero-Knowledge Protocol</h3>
+                <h3 className="text-xl font-bold text-white mb-2">Site-Bound Burner Wallets</h3>
                 <p className="text-zinc-400 text-sm max-w-sm">
-                   Your funds are mathematically dissociated from your identity using advanced ZK-SNARKs proofs.
+                   Each dApp gets a unique burner wallet derived from your master seed. No address reuse, no cross-site linking—your main wallet stays hidden.
                 </p>
              </div>
              <div className="w-full md:w-1/2">

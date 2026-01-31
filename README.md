@@ -1,6 +1,6 @@
 # Veil
 
-> **A privacy-by-default Solana wallet that automatically uses one-time burner wallets for dApp connections and lets users migrate funds to Privacy Cash when needed.**
+> **A secure Solana wallet that uses one-time burner wallets for dApp connections—connect anywhere without risking your main wallet. Optional privacy pool for unlinkable transfers.**
 
 **Type:** Non-custodial Solana browser wallet extension  
 **Goal:** Connect anywhere without risking your main wallet
@@ -63,13 +63,13 @@ Each burner wallet is:
 
 - **Automatic Balance Monitoring:** Background service worker monitors all burner wallets for incoming SOL deposits (configurable interval, default: 30 seconds).
 - **Real-time Updates:** Wallet balances automatically update when new SOL arrives.
-- **Privacy Cash Integration (Default On):** 
-  - **Toggle in Settings:** Privacy Cash mode is enabled by default to match Veil's "Privacy by Default" positioning, and can be turned off if the user prefers normal wallet mode.
-  - **When Enabled (Default):**
-    - **Deposit:** Move funds from burner wallets to Privacy Cash for unlinkable on-chain privacy (fully tested ✅)
-    - **Withdraw:** Move funds from Privacy Cash back to any wallet address (fully tested ✅, includes automatic retry for blockhash expiration)
-    - **Private Balance:** Display of private balance from Privacy Cash UTXOs
-  - **When Disabled:** Normal wallet mode - shows regular SOL balance, no Privacy Cash features
+- **Optional Private Transfers:** 
+  - **Toggle in Settings:** Enable when you want unlinkable on-chain transfers—burner wallets are the core security.
+  - **When Enabled:**
+    - **Deposit:** Move funds from burner wallets into a privacy pool for unlinkable transfers (fully tested ✅)
+    - **Withdraw:** Move funds back to any wallet address (fully tested ✅, includes automatic retry for blockhash expiration)
+    - **Private Balance:** Display of private balance from pool UTXOs
+  - **When Disabled:** Normal wallet mode - shows regular SOL balance
 - **Transfer:** Transfer SOL between wallets with improved error handling and confirmation
 - **Real-time Price:** Dynamic SOL/USD price fetching from CoinGecko API
 - **Modern UI:** Compact, modern transaction history with detailed transaction views
@@ -84,7 +84,7 @@ Each burner wallet is:
 | No address reuse | Fresh burner per session/site |
 | No wallet-to-wallet linking | Sites never see the master wallet |
 | Optional timing obfuscation | Randomized delays before transfers |
-| On-chain unlinkability | Handled by Privacy Cash integration |
+| On-chain unlinkability | Optional privacy pool integration |
 
 **Privacy by Design:** Achieved through key isolation + automation, not user discipline.
 
@@ -115,17 +115,18 @@ Each burner wallet is:
 - NFT minters connecting to unknown sites
 - Airdrop hunters
 - DAO treasuries
-- Builders needing privacy-by-default flows
+- Builders needing secure dApp connections
 
 ---
 
 ## Positioning
 
 **Category:** Privacy tooling, not a mixer  
-**Key integration:** Privacy Cash SDK  
 **Value proposition:**  
 
 > "Connect anywhere without risking your main wallet."
+
+Burner wallets provide site isolation and security by design. Optional privacy pool for unlinkable transfers when needed.
 
 ---
 
@@ -144,11 +145,11 @@ Each burner wallet is:
 - Message signing with user approval
 - Connection/disconnection handling
 
-✅ **Privacy Cash Integration**
-- Deposit funds to Privacy Cash (fully tested ✅)
-- Withdraw funds from Privacy Cash (fully tested ✅)
+✅ **Optional Private Transfers**
+- Deposit to privacy pool (fully tested ✅)
+- Withdraw to any address (fully tested ✅)
 - Private balance display
-- Toggle Privacy Cash mode in settings
+- Toggle in settings (optional add-on)
 
 ✅ **Balance & Monitoring**
 - Real-time balance monitoring (configurable interval)
@@ -166,7 +167,7 @@ Each burner wallet is:
 - **Crypto:** BIP39, Ed25519, HD wallet derivation, tweetnacl
 - **Blockchain:** Solana Web3.js
 - **Extension:** Chrome Manifest V3, Service Workers
-- **Privacy:** Privacy Cash SDK integration (Deposit & Withdraw fully functional and tested ✅)
+- **Optional:** Privacy pool integration for unlinkable transfers (fully functional and tested ✅)
 - **Monitoring:** Background balance monitoring service (configurable interval)
 - **History:** Complete transaction history tracking and display with modern, compact UI
 - **Error Handling:** Centralized error handler with user-friendly messages

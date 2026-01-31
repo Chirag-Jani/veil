@@ -165,7 +165,7 @@ const DepositModal = ({ isOpen, onClose, onDeposit, availableBalance }: DepositM
                   <div className="flex-1">
                     <p className="text-xs text-blue-300 font-medium mb-1">What happens next?</p>
                     <p className="text-xs text-blue-400/80">
-                      Your funds will be deposited into Privacy Cash, making them unlinkable on-chain. 
+                      Your funds will be deposited into a privacy pool, making them unlinkable on-chain. 
                       This process typically takes 30-60 seconds.
                     </p>
                   </div>

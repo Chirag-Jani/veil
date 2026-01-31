@@ -1,43 +1,43 @@
 const roadmapItems = [
   {
-    phase: 'Q1 2025',
-    title: 'Public Beta Launch',
+    phase: "Q1 2025",
+    title: "Public Beta Launch",
     items: [
-      'Chrome extension release',
-      'Solana mainnet support',
-      'Privacy Cash integration',
+      "Chrome extension release",
+      "Solana mainnet support",
+      "Privacy pool integration",
     ],
-    status: 'current',
+    status: "current",
   },
   {
-    phase: 'Q2 2025',
-    title: 'Enhanced Privacy',
+    phase: "Q2 2025",
+    title: "Enhanced Privacy",
     items: [
-      'Multi-token support (SPL)',
-      'Batch migration',
-      'Advanced anonymity metrics',
+      "Multi-token support (SPL)",
+      "Batch migration",
+      "Advanced anonymity metrics",
     ],
-    status: 'upcoming',
+    status: "upcoming",
   },
   {
-    phase: 'Q3 2025',
-    title: 'Ecosystem Expansion',
+    phase: "Q3 2025",
+    title: "Ecosystem Expansion",
     items: [
-      'Firefox & Brave extensions',
-      'Mobile companion app',
-      'Additional privacy protocols',
+      "Firefox & Brave extensions",
+      "Mobile companion app",
+      "Additional privacy protocols",
     ],
-    status: 'upcoming',
+    status: "upcoming",
   },
   {
-    phase: 'Q4 2025',
-    title: 'Advanced Features',
+    phase: "Q4 2025",
+    title: "Advanced Features",
     items: [
-      'Scheduled migrations',
-      'Multi-chain support',
-      'Privacy scoring dashboard',
+      "Scheduled migrations",
+      "Multi-chain support",
+      "Privacy scoring dashboard",
     ],
-    status: 'upcoming',
+    status: "upcoming",
   },
 ];
 
@@ -58,26 +58,41 @@ export const RoadmapSection = () => {
         <div className="max-w-3xl mx-auto stagger-container">
           {roadmapItems.map((item, index) => (
             <div key={item.phase} className="roadmap-item stagger-item">
-              <div className={`roadmap-dot ${item.status === 'upcoming' ? 'roadmap-dot-upcoming' : ''}`} />
-              
+              <div
+                className={`roadmap-dot ${
+                  item.status === "upcoming" ? "roadmap-dot-upcoming" : ""
+                }`}
+              />
+
               <div className="pb-2">
-                <span className={`text-sm font-semibold ${
-                  item.status === 'current' ? 'text-primary' : 'text-muted-foreground'
-                }`}>
+                <span
+                  className={`text-sm font-semibold ${
+                    item.status === "current"
+                      ? "text-primary"
+                      : "text-muted-foreground"
+                  }`}
+                >
                   {item.phase}
                 </span>
               </div>
-              
-              <div className={`feature-card ${item.status === 'current' ? 'border-primary/30' : ''}`}>
+
+              <div
+                className={`feature-card ${
+                  item.status === "current" ? "border-primary/30" : ""
+                }`}
+              >
                 <h3 className="text-lg font-semibold text-foreground mb-4 font-display">
                   {item.title}
-                  {item.status === 'current' && (
+                  {item.status === "current" && (
                     <span className="ml-3 privacy-badge">In Progress</span>
                   )}
                 </h3>
                 <ul className="space-y-2">
                   {item.items.map((feature) => (
-                    <li key={feature} className="flex items-center gap-3 text-muted-foreground text-sm">
+                    <li
+                      key={feature}
+                      className="flex items-center gap-3 text-muted-foreground text-sm"
+                    >
                       <div className="w-1.5 h-1.5 rounded-full bg-primary/50" />
                       {feature}
                     </li>
