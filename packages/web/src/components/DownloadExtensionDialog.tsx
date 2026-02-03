@@ -69,8 +69,8 @@ export const DownloadExtensionDialog = ({
                 What you get
               </p>
               <ul className="space-y-1.5 text-sm text-muted-foreground">
-                <li>• Early access to the Veil browser extension</li>
-                <li>• Latest beta builds before anyone else</li>
+                <li>• Privacy-first Solana wallet extension</li>
+                <li>• Early access before public launch</li>
                 <li>• Direct line to share product feedback</li>
               </ul>
             </div>
@@ -146,7 +146,7 @@ export const DownloadExtensionDialog = ({
                   window.open(
                     "https://x.com/theveilwallet",
                     "_blank",
-                    "noopener,noreferrer",
+                    "noopener,noreferrer"
                   );
                   onOpenChange(false);
                 }}

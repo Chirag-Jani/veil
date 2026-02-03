@@ -30,9 +30,13 @@ const footerLinks = {
   //   { label: 'FAQ', href: '#' },
   // ],
   community: [
-    { label: "X", href: "#", icon: ExternalLink },
-    { label: "Discord", href: "#", icon: ExternalLink },
-    { label: "GitHub", href: "#", icon: ExternalLink },
+    { label: "X", href: "https://x.com/theveilwallet", icon: ExternalLink },
+    { label: "Discord", href: "", icon: ExternalLink },
+    {
+      label: "GitHub",
+      href: "",
+      icon: ExternalLink,
+    },
     // { label: 'Blog', href: '#' },
   ],
   security: [
@@ -120,6 +124,7 @@ export const Footer = () => {
                     <a
                       href={link.href}
                       className="text-sm text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1"
+                      target="_blank"
                     >
                       {link.label}
                       {IconComponent && <IconComponent className="w-3 h-3" />}
@@ -167,12 +172,14 @@ export const Footer = () => {
             <a
               href="https://x.com/theveilwallet"
               className="text-muted-foreground hover:text-foreground transition-colors"
+              target="_blank"
             >
               <XIcon className="w-5 h-5" />
             </a>
             <a
               href="https://github.com/chirag-jani/veil"
               className="text-muted-foreground hover:text-foreground transition-colors"
+              target="_blank"
             >
               <Github className="w-5 h-5" />
             </a>

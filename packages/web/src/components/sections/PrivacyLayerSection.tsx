@@ -1,4 +1,4 @@
-import { Lock, Layers, Shield, Network } from 'lucide-react';
+import { Layers, Lock, Network, Shield } from "lucide-react";
 
 export const PrivacyLayerSection = () => {
   return (
@@ -28,7 +28,7 @@ export const PrivacyLayerSection = () => {
                     </div>
                     <div className="flex-1 h-12 bg-muted rounded-lg flex items-center px-4">
                       <span className="text-sm text-muted-foreground font-mono">
-                        Temp Wallet → Deposit
+                        Private Address → Deposit
                       </span>
                     </div>
                   </div>
@@ -80,8 +80,9 @@ export const PrivacyLayerSection = () => {
               Protocol-Level <span className="text-primary">Anonymity</span>
             </h2>
             <p className="section-subtitle mb-8 reveal-up">
-              Veil integrates with Privacy Cash protocol to provide cryptographic privacy guarantees. 
-              Your anonymity isn't based on obscurity—it's mathematically proven.
+              Veil integrates with Privacy Cash protocol to provide
+              cryptographic privacy guarantees. Your anonymity isn't based on
+              obscurity—it's mathematically proven.
             </p>
 
             <div className="space-y-6 stagger-container">
@@ -90,9 +91,12 @@ export const PrivacyLayerSection = () => {
                   <Layers className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-foreground mb-1 font-display">Pooled Anonymity</h3>
+                  <h3 className="font-semibold text-foreground mb-1 font-display">
+                    Pooled Anonymity
+                  </h3>
                   <p className="text-sm text-muted-foreground">
-                    Your funds mix with others in the privacy pool, making it impossible to trace the origin.
+                    Your funds mix with others in the privacy pool, making it
+                    impossible to trace the origin.
                   </p>
                 </div>
               </div>
@@ -102,9 +106,12 @@ export const PrivacyLayerSection = () => {
                   <Shield className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-foreground mb-1 font-display">Zero-Knowledge Proofs</h3>
+                  <h3 className="font-semibold text-foreground mb-1 font-display">
+                    Zero-Knowledge Proofs
+                  </h3>
                   <p className="text-sm text-muted-foreground">
-                    Prove you have the right to withdraw without revealing which deposit was yours.
+                    Prove you have the right to withdraw without revealing which
+                    deposit was yours.
                   </p>
                 </div>
               </div>
@@ -114,9 +121,12 @@ export const PrivacyLayerSection = () => {
                   <Network className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-foreground mb-1 font-display">Growing Anonymity Set</h3>
+                  <h3 className="font-semibold text-foreground mb-1 font-display">
+                    Growing Anonymity Set
+                  </h3>
                   <p className="text-sm text-muted-foreground">
-                    The more users participate, the stronger everyone's privacy becomes.
+                    The more users participate, the stronger everyone's privacy
+                    becomes.
                   </p>
                 </div>
               </div>

@@ -1,21 +1,23 @@
-Veil - Secure Solana Wallet Extension
+Veil - Privacy-First Solana Wallet Extension
 
 What it is
 ----------
-Veil is a non-custodial Solana browser extension that manages a single locally encrypted master seed and derives unlimited deterministic burner wallets from it. dApps never see your main wallet—you connect anywhere without risk.
+Veil is a non-custodial Solana browser extension that puts privacy first. It manages a single locally encrypted master seed and derives site-bound addresses from it. dApps never see your main wallet—you own your on-chain identity and stay protected.
 
 Problem
 -------
-- Users don’t want to connect their primary wallet to random or untrusted dApps.
-- Manually creating and managing burner wallets is painful and error-prone.
-- Address reuse leaks identity by letting observers link on-chain activity across sites.
+- On-chain transparency exposes your financial life—every transaction reveals your wallet.
+- Address reuse lets observers link your activity across sites and build a complete picture.
+- Standard wallets offer zero separation between receiving airdrops, payments, and your main holdings.
+- Users want to own their privacy but lack tools that make it the default.
 
 Core Idea
 ---------
+- Privacy by default: Veil protects your identity so you never get exposed.
 - One encrypted master seed stored on the user’s device.
-- From that seed, Veil deterministically derives site-bound, session-scoped burner wallets.
-- Each burner is isolated per origin, recoverable from the master seed, and never reused once drained.
-- dApps only ever interact with a burner wallet, not the master wallet.
+- From that seed, Veil deterministically derives site-bound addresses (burner wallets) per origin.
+- Each address is isolated, recoverable from the master seed, and never reused once drained.
+- dApps only ever interact with a site-bound address, not the master wallet.
 
 Optional: Private Transfers
 --------------------------------------
@@ -76,5 +78,5 @@ Tech Stack
 Positioning
 -----------
 - Category: Privacy tooling for Solana, not a mixer or custodial service.
-- Key value proposition: “Connect anywhere without risking your main wallet.” Burner wallets provide site isolation and security by design; optional privacy pool for unlinkable transfers when needed.
+- Key value proposition: "Privacy by default. Own your on-chain identity." Site-bound addresses and optional privacy pools keep you from getting exposed; burner wallets are the mechanism, not the main pitch.
 

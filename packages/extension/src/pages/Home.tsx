@@ -151,7 +151,7 @@ const Home = () => {
       await storeConnectionApproval(
         pendingConnection.id,
         true,
-        activeWallet.fullAddress,
+        activeWallet.fullAddress
       );
       setPendingConnection(null);
       // Reload connected sites after approval
@@ -224,7 +224,7 @@ const Home = () => {
         console.error("[Veil] Error disconnecting site:", error);
       }
     },
-    [loadConnectedSites],
+    [loadConnectedSites]
   );
 
   const generateNewBurner = useCallback(
@@ -253,7 +253,7 @@ const Home = () => {
         // Check existing active wallets and archive those with balance < 0.001 SOL
         const existingWallets = await getAllBurnerWallets();
         const activeWallets = existingWallets.filter(
-          (w) => w.isActive && !w.archived,
+          (w) => w.isActive && !w.archived
         );
 
         for (const wallet of activeWallets) {
@@ -307,7 +307,7 @@ const Home = () => {
         setIsGenerating(false);
       }
     },
-    [password, loadWallets],
+    [password, loadWallets]
   );
 
   const checkWalletState = useCallback(async () => {
@@ -320,7 +320,7 @@ const Home = () => {
       }
 
       const locked = await isWalletLocked();
-      
+
       // If wallet appears unlocked, validate session expiry
       let shouldBeLocked = locked;
       if (!locked) {
@@ -452,7 +452,7 @@ const Home = () => {
     const fetchSolPrice = async () => {
       try {
         const response = await fetch(
-          "https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd",
+          "https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd"
         );
         if (!response.ok) {
           throw new Error("Failed to fetch SOL price");
@@ -580,7 +580,7 @@ const Home = () => {
           // Use getKeypairForIndex to handle private key imports correctly
           const keypair = await getKeypairForIndex(
             currentPassword,
-            activeWalletIndex,
+            activeWalletIndex
           );
           const newPubKey = keypair.publicKey.toBase58();
 
@@ -649,7 +649,7 @@ const Home = () => {
 
             // Update active wallet balance only (same index)
             const updatedActiveWallet = updatedWallets.find(
-              (w) => w.index === activeWalletIndex,
+              (w) => w.index === activeWalletIndex
             );
             if (updatedActiveWallet) {
               setActiveWallet(updatedActiveWallet);
@@ -699,7 +699,7 @@ const Home = () => {
       }
       await chrome.storage.local.remove("veil:temp_session_password");
       throw new Error(
-        "Session expired. Please close this dialog, unlock your wallet, and try again.",
+        "Session expired. Please close this dialog, unlock your wallet, and try again."
       );
     }
 
@@ -715,7 +715,7 @@ const Home = () => {
         // Check chrome.storage.session
         try {
           const sessionData = await chrome.storage.session.get(
-            "veil:session_password",
+            "veil:session_password"
           );
           if (sessionData["veil:session_password"]) {
             currentPassword = sessionData["veil:session_password"] as string;
@@ -740,7 +740,7 @@ const Home = () => {
       if (!currentPassword) {
         try {
           const localData = await chrome.storage.local.get(
-            "veil:temp_session_password",
+            "veil:temp_session_password"
           );
           if (localData["veil:temp_session_password"]) {
             currentPassword = localData["veil:temp_session_password"] as string;
@@ -765,7 +765,7 @@ const Home = () => {
       }
       await chrome.storage.local.remove("veil:temp_session_password");
       throw new Error(
-        "Session expired. Please close this dialog, unlock your wallet, and try again.",
+        "Session expired. Please close this dialog, unlock your wallet, and try again."
       );
     }
 
@@ -792,7 +792,7 @@ const Home = () => {
       if (!service.isInitialized()) {
         const keypair = await getKeypairForIndex(
           currentPassword,
-          activeWallet.index,
+          activeWallet.index
         );
         await service.initialize(keypair);
       }
@@ -847,7 +847,7 @@ const Home = () => {
   // Withdraw handler using real Privacy Cash service
   const handleWithdraw = async (
     amount: number,
-    recipient?: string,
+    recipient?: string
   ): Promise<void> => {
     if (!privacyCashMode) {
       throw new Error("Privacy Cash mode is not enabled");
@@ -869,7 +869,7 @@ const Home = () => {
       }
       await chrome.storage.local.remove("veil:temp_session_password");
       throw new Error(
-        "Session expired. Please close this dialog, unlock your wallet, and try again.",
+        "Session expired. Please close this dialog, unlock your wallet, and try again."
       );
     }
 
@@ -885,7 +885,7 @@ const Home = () => {
         // Check chrome.storage.session
         try {
           const sessionData = await chrome.storage.session.get(
-            "veil:session_password",
+            "veil:session_password"
           );
           if (sessionData["veil:session_password"]) {
             currentPassword = sessionData["veil:session_password"] as string;
@@ -910,7 +910,7 @@ const Home = () => {
       if (!currentPassword) {
         try {
           const localData = await chrome.storage.local.get(
-            "veil:temp_session_password",
+            "veil:temp_session_password"
           );
           if (localData["veil:temp_session_password"]) {
             currentPassword = localData["veil:temp_session_password"] as string;
@@ -935,7 +935,7 @@ const Home = () => {
       }
       await chrome.storage.local.remove("veil:temp_session_password");
       throw new Error(
-        "Session expired. Please close this dialog, unlock your wallet, and try again.",
+        "Session expired. Please close this dialog, unlock your wallet, and try again."
       );
     }
 
@@ -969,11 +969,11 @@ const Home = () => {
       // Ensure service is initialized
       if (!service.isInitialized()) {
         console.log(
-          "[Veil] Service not initialized, initializing for withdraw...",
+          "[Veil] Service not initialized, initializing for withdraw..."
         );
         const keypair = await getKeypairForIndex(
           currentPassword,
-          activeWallet.index,
+          activeWallet.index
         );
         await service.initialize(keypair);
       }
@@ -1034,7 +1034,7 @@ const Home = () => {
   // This is always available as a main action button (doesn't require privacy cash mode toggle)
   const handleSendPrivately = async (
     amount: number,
-    recipient?: string,
+    recipient?: string
   ): Promise<void> => {
     console.log("[Veil] handleSendPrivately called with:", {
       amount,
@@ -1076,7 +1076,7 @@ const Home = () => {
     let currentPassword = password;
     console.log(
       "[Veil] Password from state:",
-      currentPassword ? "exists" : "null",
+      currentPassword ? "exists" : "null"
     );
 
     if (!currentPassword) {
@@ -1084,7 +1084,7 @@ const Home = () => {
       const sessionPassword = sessionStorage.getItem("veil:session_password");
       console.log(
         "[Veil] Session password (sessionStorage):",
-        sessionPassword ? "exists" : "null",
+        sessionPassword ? "exists" : "null"
       );
       if (sessionPassword) {
         currentPassword = sessionPassword;
@@ -1093,12 +1093,12 @@ const Home = () => {
         // Check chrome.storage.session
         try {
           const sessionData = await chrome.storage.session.get(
-            "veil:session_password",
+            "veil:session_password"
           );
           if (sessionData["veil:session_password"]) {
             currentPassword = sessionData["veil:session_password"] as string;
             console.log(
-              "[Veil] Session password (chrome.storage.session): exists",
+              "[Veil] Session password (chrome.storage.session): exists"
             );
             setPassword(currentPassword);
             // Also sync to sessionStorage for consistency
@@ -1114,7 +1114,7 @@ const Home = () => {
         const tempPassword = sessionStorage.getItem("veil:temp_password");
         console.log(
           "[Veil] Temp password (sessionStorage):",
-          tempPassword ? "exists" : "null",
+          tempPassword ? "exists" : "null"
         );
         if (tempPassword) {
           currentPassword = tempPassword;
@@ -1126,7 +1126,7 @@ const Home = () => {
       if (!currentPassword) {
         try {
           const localData = await chrome.storage.local.get(
-            "veil:temp_session_password",
+            "veil:temp_session_password"
           );
           if (localData["veil:temp_session_password"]) {
             currentPassword = localData["veil:temp_session_password"] as string;
@@ -1145,7 +1145,7 @@ const Home = () => {
       // Password not available - need to re-unlock
       console.error("[Veil] No password available!");
       throw new Error(
-        "Session expired. Please close this dialog, unlock your wallet, and try again.",
+        "Session expired. Please close this dialog, unlock your wallet, and try again."
       );
     }
     console.log("[Veil] Password obtained successfully");
@@ -1182,7 +1182,7 @@ const Home = () => {
         console.log("[Veil] Service not initialized, initializing...");
         const keypair = await getKeypairForIndex(
           currentPassword,
-          activeWallet.index,
+          activeWallet.index
         );
         await service.initialize(keypair);
       }
@@ -1194,7 +1194,7 @@ const Home = () => {
         lamports,
         "lamports (",
         amount,
-        "SOL)",
+        "SOL)"
       );
 
       // Validate recipient address if provided
@@ -1309,7 +1309,7 @@ const Home = () => {
     // If password is not available but wallet is unlocked, just reload from storage
     if (!currentPassword) {
       console.log(
-        "[Veil] Password not available, reloading from persisted storage...",
+        "[Veil] Password not available, reloading from persisted storage..."
       );
       setIsRefreshingPrivateBalance(true);
       try {
@@ -1334,7 +1334,7 @@ const Home = () => {
         console.log("[Veil] Service not initialized, initializing now...");
         const keypair = await getKeypairForIndex(
           currentPassword,
-          activeWallet.index,
+          activeWallet.index
         );
         await service.initialize(keypair);
       }
@@ -1357,7 +1357,7 @@ const Home = () => {
 
       if (newBalance === 0) {
         console.warn(
-          "[Veil] Balance is still 0 after refresh. Check console for errors.",
+          "[Veil] Balance is still 0 after refresh. Check console for errors."
         );
       }
     } catch (error) {
@@ -1375,7 +1375,7 @@ const Home = () => {
   // Transfer handler for moving SOL between wallets
   const handleTransfer = async (
     amount: number,
-    recipient: string,
+    recipient: string
   ): Promise<string> => {
     if (!activeWallet) {
       throw new Error("No active wallet selected");
@@ -1415,7 +1415,7 @@ const Home = () => {
         // Check chrome.storage.session
         try {
           const sessionData = await chrome.storage.session.get(
-            "veil:session_password",
+            "veil:session_password"
           );
           if (sessionData["veil:session_password"]) {
             currentPassword = sessionData["veil:session_password"] as string;
@@ -1441,7 +1441,7 @@ const Home = () => {
       if (!currentPassword) {
         try {
           const localData = await chrome.storage.local.get(
-            "veil:temp_session_password",
+            "veil:temp_session_password"
           );
           if (localData["veil:temp_session_password"]) {
             currentPassword = localData["veil:temp_session_password"] as string;
@@ -1475,7 +1475,9 @@ const Home = () => {
     const requiredBalance = amount + feeEstimate;
     if (activeWallet.balance < requiredBalance) {
       throw new Error(
-        `Insufficient balance. You need at least ${requiredBalance.toFixed(6)} SOL (including transaction fees).`,
+        `Insufficient balance. You need at least ${requiredBalance.toFixed(
+          6
+        )} SOL (including transaction fees).`
       );
     }
 
@@ -1498,7 +1500,7 @@ const Home = () => {
       const rpcManager = createRPCManager();
       const keypair = await getKeypairForIndex(
         currentPassword,
-        activeWallet.index,
+        activeWallet.index
       );
 
       console.log("[Veil] Starting transfer:", {
@@ -1526,7 +1528,7 @@ const Home = () => {
                 fromPubkey: keypair.publicKey,
                 toPubkey: recipientPubkey,
                 lamports,
-              }),
+              })
             );
 
             tx.recentBlockhash = blockhash;
@@ -1557,14 +1559,14 @@ const Home = () => {
                   blockhash,
                   lastValidBlockHeight,
                 },
-                "confirmed",
+                "confirmed"
               );
 
               // 20 second timeout for confirmation
               const timeoutPromise = new Promise((_, reject) => {
                 setTimeout(
                   () => reject(new Error("Confirmation timeout")),
-                  20000,
+                  20000
                 );
               });
 
@@ -1584,12 +1586,12 @@ const Home = () => {
                 errorMsg.includes("block height")
               ) {
                 console.log(
-                  "[Veil] Transaction sent successfully. Confirmation timed out, but transaction is processing on-chain.",
+                  "[Veil] Transaction sent successfully. Confirmation timed out, but transaction is processing on-chain."
                 );
               } else {
                 console.log(
                   "[Veil] Transaction sent successfully. Confirmation may take longer, but transaction is processing.",
-                  errorMsg,
+                  errorMsg
                 );
               }
               // Don't throw - transaction was sent, that's success
@@ -1600,7 +1602,7 @@ const Home = () => {
             console.error("[Veil] Error in transfer step:", stepError);
             throw stepError;
           }
-        },
+        }
       );
 
       // Reload wallets to update balance
@@ -1653,18 +1655,16 @@ const Home = () => {
           {isGenerating ? (
             <>
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-4"></div>
-              <p className="text-gray-400">
-                Generating your first burner wallet...
-              </p>
+              <p className="text-gray-400">Setting up your private wallet...</p>
             </>
           ) : (
             <>
-              <p className="text-gray-400 mb-4">No burner wallets yet</p>
+              <p className="text-gray-400 mb-4">No private addresses yet</p>
               <button
                 onClick={() => generateNewBurner()}
                 className="px-4 py-2 bg-white text-black rounded-lg hover:bg-gray-200"
               >
-                Generate First Burner
+                Create First Address
               </button>
             </>
           )}
@@ -1712,7 +1712,11 @@ const Home = () => {
                 e.stopPropagation();
                 setShowCopyPopup(!showCopyPopup);
               }}
-              className={`p-1 mt-3 rounded-md transition-colors relative z-[60] ${showCopyPopup ? "bg-white/10 text-white" : "text-gray-500 hover:bg-white/10 hover:text-white"}`}
+              className={`p-1 mt-3 rounded-md transition-colors relative z-[60] ${
+                showCopyPopup
+                  ? "bg-white/10 text-white"
+                  : "text-gray-500 hover:bg-white/10 hover:text-white"
+              }`}
             >
               <Copy className="w-3.5 h-3.5" />
             </button>
@@ -1892,7 +1896,9 @@ const Home = () => {
                     title="Refresh private balance"
                   >
                     <RefreshCw
-                      className={`w-3.5 h-3.5 text-purple-400 ${isRefreshingPrivateBalance ? "animate-spin" : ""}`}
+                      className={`w-3.5 h-3.5 text-purple-400 ${
+                        isRefreshingPrivateBalance ? "animate-spin" : ""
+                      }`}
                     />
                   </button>
                   <div className="text-right">
@@ -1951,7 +1957,7 @@ const Home = () => {
             <RefreshCw
               className={`w-4 h-4 ${isGenerating ? "animate-spin" : ""}`}
             />
-            <span>{isGenerating ? "Generating..." : "New Burner"}</span>
+            <span>{isGenerating ? "Generating..." : "New Address"}</span>
           </button>
         </div>
       </div>
@@ -1979,7 +1985,9 @@ const Home = () => {
               </div>
 
               <div className="flex items-center justify-between px-4 pb-3">
-                <h3 className="text-sm font-bold text-white">Burner Wallets</h3>
+                <h3 className="text-sm font-bold text-white">
+                  Private Addresses
+                </h3>
                 <button
                   onClick={() => setShowWalletList(false)}
                   className="p-1.5 hover:bg-white/10 rounded-full"
@@ -2047,16 +2055,14 @@ const Home = () => {
                     <Plus className="w-4 h-4 text-gray-400" />
                   </div>
                   <span className="text-xs font-medium text-gray-400">
-                    Create New Burner
+                    Create New Address
                   </span>
                 </button>
               </div>
 
               <div className="px-4 py-3 border-t border-white/10 bg-black/20">
                 <div className="flex justify-between items-center">
-                  <span className="text-xs text-gray-500">
-                    Total Across All Burners
-                  </span>
+                  <span className="text-xs text-gray-500">Total Balance</span>
                   <span className="text-sm font-bold text-white">
                     {totalBalance.toFixed(2)} SOL
                   </span>

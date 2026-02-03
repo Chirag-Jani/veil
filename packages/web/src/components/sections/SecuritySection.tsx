@@ -1,42 +1,48 @@
-import { Shield, KeyRound, Eye, Server, Lock, FileKey } from 'lucide-react';
 import {
   Carousel,
   CarouselContent,
   CarouselItem,
   CarouselNext,
   CarouselPrevious,
-} from '@/components/ui/carousel';
+} from "@/components/ui/carousel";
+import { Eye, FileKey, KeyRound, Lock, Server, Shield } from "lucide-react";
 
 const securityFeatures = [
   {
     icon: KeyRound,
-    title: 'Local Key Generation',
-    description: 'All private keys are generated in your browser using cryptographically secure randomness. Keys never leave your device.',
+    title: "Local Key Generation",
+    description:
+      "All private keys are generated in your browser using cryptographically secure randomness. Keys never leave your device.",
   },
   {
     icon: Eye,
-    title: 'Zero Data Collection',
-    description: 'Veil doesn\'t collect, store, or transmit any personal information. No analytics, no tracking, no logs.',
+    title: "Zero Data Collection",
+    description:
+      "Veil doesn't collect, store, or transmit any personal information. No analytics, no tracking, no logs.",
   },
   {
     icon: Server,
-    title: 'No Backend Custody',
-    description: 'There is no Veil server holding your funds. You are always in complete control of your assets.',
+    title: "No Backend Custody",
+    description:
+      "There is no Veil server holding your funds. You are always in complete control of your assets.",
   },
   {
     icon: Lock,
-    title: 'Encrypted Storage',
-    description: 'Local storage is encrypted with your password. Even if someone accesses your browser, keys remain protected.',
+    title: "Encrypted Storage",
+    description:
+      "Local storage is encrypted with your password. Even if someone accesses your browser, keys remain protected.",
   },
   {
     icon: FileKey,
-    title: 'Open Source',
-    description: 'Security through transparency. Veil\'s open-source code allows independent audits and community-driven verification.',
+    title: "Open Source",
+    description:
+      "Security through transparency. Veil's open-source code allows independent audits and community-driven verification.",
   },
   {
     icon: Shield,
-    title: 'Burner Isolation',
-    description: 'Each dApp gets a unique burner wallet. No address reuse, no cross-site linking—your main wallet stays hidden.',
+    title: "Site-Bound Privacy",
+    description:
+      "Each dApp gets a unique address. No address reuse, no cross-site linking—your identity stays protected.",
   },
 ];
 
@@ -50,7 +56,7 @@ export const SecuritySection = () => {
             Your Keys, <span className="text-primary">Your Control</span>
           </h2>
           <p className="section-subtitle mx-auto reveal-up">
-            Veil is built on the principle of minimal trust. You don't have to 
+            Veil is built on the principle of minimal trust. You don't have to
             trust us—you only need to verify the code.
           </p>
         </div>
@@ -58,19 +64,19 @@ export const SecuritySection = () => {
         {/* Mobile Carousel */}
         <div className="md:hidden reveal-up relative -mx-6">
           <div className="relative px-6">
-            <Carousel opts={{ align: 'start', loop: true }} className="w-full">
+            <Carousel opts={{ align: "start", loop: true }} className="w-full">
               <CarouselContent>
                 {securityFeatures.map((feature) => (
                   <CarouselItem key={feature.title}>
                     <div className="feature-card p-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                        <feature.icon className="w-5 h-5" />
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                          <feature.icon className="w-5 h-5" />
+                        </div>
+                        <h3 className="text-base font-semibold text-foreground font-display leading-tight flex-1">
+                          {feature.title}
+                        </h3>
                       </div>
-                      <h3 className="text-base font-semibold text-foreground font-display leading-tight flex-1">
-                        {feature.title}
-                      </h3>
-                    </div>
                       <p className="text-muted-foreground text-sm leading-relaxed">
                         {feature.description}
                       </p>
@@ -78,13 +84,13 @@ export const SecuritySection = () => {
                   </CarouselItem>
                 ))}
               </CarouselContent>
-              <CarouselPrevious 
-                variant="ghost" 
-                className="absolute -left-6 top-1/2 -translate-y-1/2 bg-transparent hover:bg-transparent border-none text-foreground hover:text-foreground/80 shadow-none z-10" 
+              <CarouselPrevious
+                variant="ghost"
+                className="absolute -left-6 top-1/2 -translate-y-1/2 bg-transparent hover:bg-transparent border-none text-foreground hover:text-foreground/80 shadow-none z-10"
               />
-              <CarouselNext 
-                variant="ghost" 
-                className="absolute -right-6 top-1/2 -translate-y-1/2 bg-transparent hover:bg-transparent border-none text-foreground hover:text-foreground/80 shadow-none z-10" 
+              <CarouselNext
+                variant="ghost"
+                className="absolute -right-6 top-1/2 -translate-y-1/2 bg-transparent hover:bg-transparent border-none text-foreground hover:text-foreground/80 shadow-none z-10"
               />
             </Carousel>
           </div>

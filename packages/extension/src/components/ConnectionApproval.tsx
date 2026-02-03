@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Globe, Check, X, Shield } from "lucide-react";
+import { Check, Globe, Shield, X } from "lucide-react";
 import type { PendingConnectionRequest } from "../utils/storage";
 
 interface ConnectionApprovalProps {
@@ -50,9 +50,7 @@ const ConnectionApproval = ({
               <h2 className="text-sm font-semibold text-white truncate">
                 Connection Request
               </h2>
-              <p className="text-[10px] text-gray-400 truncate">
-                {domain}
-              </p>
+              <p className="text-[10px] text-gray-400 truncate">{domain}</p>
             </div>
           </div>
         </div>
@@ -64,8 +62,12 @@ const ConnectionApproval = ({
             <div className="flex items-center gap-2">
               <Globe className="w-3.5 h-3.5 text-gray-400 shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-xs text-white font-medium truncate">{domain}</p>
-                <p className="text-[10px] text-gray-500 truncate">{request.origin}</p>
+                <p className="text-xs text-white font-medium truncate">
+                  {domain}
+                </p>
+                <p className="text-[10px] text-gray-500 truncate">
+                  {request.origin}
+                </p>
               </div>
             </div>
           </div>
@@ -93,6 +95,10 @@ const ConnectionApproval = ({
               <p className="flex items-center gap-1.5">
                 <Check className="w-3 h-3 text-green-400 shrink-0" />
                 Request transaction signatures
+              </p>
+              <p className="flex items-center gap-1.5 mt-1.5 text-blue-400/90">
+                <Shield className="w-3 h-3 shrink-0" />
+                This site sees a unique address—your main wallet stays hidden
               </p>
             </div>
           </div>

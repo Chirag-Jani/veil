@@ -1,4 +1,4 @@
-import veilLogo from '@/assets/veil_tp.png';
+import veilLogo from "@/assets/veil_tp.png";
 
 export const ExtensionPreviewSection = () => {
   return (
@@ -10,8 +10,8 @@ export const ExtensionPreviewSection = () => {
             Privacy at Your <span className="text-primary">Fingertips</span>
           </h2>
           <p className="section-subtitle mx-auto reveal-up">
-            A clean, intuitive interface that makes private transactions as simple 
-            as using any other wallet extension.
+            A clean, intuitive interface that makes private transactions as
+            simple as using any other wallet extension.
           </p>
         </div>
 
@@ -39,14 +39,18 @@ export const ExtensionPreviewSection = () => {
                 <div className="flex items-center gap-3 p-3 rounded-xl bg-primary/10 border border-primary/20">
                   <img src={veilLogo} alt="" className="w-8 h-8" />
                   <div>
-                    <div className="text-sm font-semibold text-foreground">Veil Wallet</div>
-                    <div className="text-xs text-muted-foreground">Connected</div>
+                    <div className="text-sm font-semibold text-foreground">
+                      Veil Wallet
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Connected
+                    </div>
                   </div>
                 </div>
 
                 <nav className="space-y-1">
                   <a className="block px-3 py-2 rounded-lg bg-muted text-foreground text-sm font-medium">
-                    Temp Wallets
+                    Private Addresses
                   </a>
                   <a className="block px-3 py-2 rounded-lg text-muted-foreground hover:text-foreground text-sm">
                     Migrate Funds
@@ -63,8 +67,12 @@ export const ExtensionPreviewSection = () => {
               {/* Main Content */}
               <div className="flex-1 space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-foreground font-display">Temporary Wallets</h3>
-                  <button className="btn-primary text-sm py-2 px-4">+ New Wallet</button>
+                  <h3 className="text-lg font-semibold text-foreground font-display">
+                    Private Addresses
+                  </h3>
+                  <button className="btn-primary text-sm py-2 px-4">
+                    + New Address
+                  </button>
                 </div>
 
                 {/* Wallet Cards */}
@@ -76,15 +84,21 @@ export const ExtensionPreviewSection = () => {
                           <span className="text-primary font-bold">#1</span>
                         </div>
                         <div>
-                          <div className="font-medium text-foreground">Airdrop Wallet</div>
-                          <div className="text-xs text-muted-foreground font-mono">7xKp...4mNq</div>
+                          <div className="font-medium text-foreground">
+                            Airdrop Wallet
+                          </div>
+                          <div className="text-xs text-muted-foreground font-mono">
+                            7xKp...4mNq
+                          </div>
                         </div>
                       </div>
                       <span className="privacy-badge">Active</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Balance</span>
-                      <span className="text-foreground font-medium">12.5 SOL</span>
+                      <span className="text-foreground font-medium">
+                        12.5 SOL
+                      </span>
                     </div>
                   </div>
 
@@ -92,14 +106,22 @@ export const ExtensionPreviewSection = () => {
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                          <span className="text-muted-foreground font-bold">#2</span>
+                          <span className="text-muted-foreground font-bold">
+                            #2
+                          </span>
                         </div>
                         <div>
-                          <div className="font-medium text-muted-foreground">Payment Receiver</div>
-                          <div className="text-xs text-muted-foreground font-mono">3aRt...9bXw</div>
+                          <div className="font-medium text-muted-foreground">
+                            Payment Receiver
+                          </div>
+                          <div className="text-xs text-muted-foreground font-mono">
+                            3aRt...9bXw
+                          </div>
                         </div>
                       </div>
-                      <span className="text-xs text-muted-foreground">Migrated</span>
+                      <span className="text-xs text-muted-foreground">
+                        Migrated
+                      </span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Balance</span>

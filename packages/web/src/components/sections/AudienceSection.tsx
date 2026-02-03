@@ -1,25 +1,29 @@
-import { User, Code, Briefcase, Trophy } from 'lucide-react';
+import { Briefcase, Code, Trophy, User } from "lucide-react";
 
 const audiences = [
   {
     icon: User,
-    title: 'Privacy Advocates',
-    description: 'Anyone who believes financial privacy is a fundamental right and wants to protect their on-chain activity.',
+    title: "Privacy Advocates",
+    description:
+      "Anyone who believes financial privacy is a fundamental right and wants to protect their on-chain activity.",
   },
   {
     icon: Code,
-    title: 'Developers & Testers',
-    description: 'Builders who need isolated wallets for testing dApps without mixing with personal funds.',
+    title: "Developers & Testers",
+    description:
+      "Builders who want privacy when testing dApps—isolated addresses without exposing personal holdings.",
   },
   {
     icon: Briefcase,
-    title: 'Businesses & Freelancers',
-    description: 'Professionals who want to receive payments without exposing their treasury or holdings.',
+    title: "Businesses & Freelancers",
+    description:
+      "Professionals who want to receive payments without exposing their treasury or holdings.",
   },
   {
     icon: Trophy,
-    title: 'Airdrop Hunters',
-    description: 'Users who farm airdrops across protocols and need to consolidate without linking wallets.',
+    title: "Airdrop Hunters",
+    description:
+      "Users who farm airdrops and want to keep activity private—consolidate without linking identities.",
   },
 ];
 
@@ -33,14 +37,17 @@ export const AudienceSection = () => {
             Built for <span className="text-primary">You</span>
           </h2>
           <p className="section-subtitle mx-auto reveal-up">
-            Whether you're protecting personal privacy or managing complex wallet operations, 
-            Veil has you covered.
+            Whether you value financial privacy or want to stay invisible
+            on-chain, Veil has you covered.
           </p>
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 stagger-container">
           {audiences.map((audience) => (
-            <div key={audience.title} className="text-center feature-card stagger-item">
+            <div
+              key={audience.title}
+              className="text-center feature-card stagger-item"
+            >
               <div className="feature-icon mx-auto mb-4">
                 <audience.icon className="w-6 h-6" />
               </div>

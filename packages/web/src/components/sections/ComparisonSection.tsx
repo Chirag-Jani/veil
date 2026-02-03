@@ -1,38 +1,50 @@
-import { Check, X } from 'lucide-react';
+import { Check, X } from "lucide-react";
 
 const comparisons = [
   {
-    feature: 'Temporary Addresses',
+    feature: "Privacy by Default",
     standardWallet: false,
     privacyTool: true,
     veil: true,
   },
   {
-    feature: 'Non-Custodial',
+    feature: "Non-Custodial",
     standardWallet: true,
     privacyTool: false,
     veil: true,
   },
   {
-    feature: 'Privacy Pool Integration',
+    feature: "Private Transfers",
     standardWallet: false,
     privacyTool: true,
     veil: true,
   },
   {
-    feature: 'Browser Extension',
-    standardWallet: true,
-    privacyTool: false,
-    veil: true,
-  },
-  {
-    feature: 'One-Click Migration',
+    feature: "Multi-chain Transfers & Swaps",
     standardWallet: false,
     privacyTool: false,
     veil: true,
   },
   {
-    feature: 'Local Key Storage',
+    feature: "Site-Bound Burner Wallets",
+    standardWallet: false,
+    privacyTool: false,
+    veil: true,
+  },
+  {
+    feature: "Browser Extension",
+    standardWallet: true,
+    privacyTool: false,
+    veil: true,
+  },
+  {
+    feature: "One-Click Migration",
+    standardWallet: false,
+    privacyTool: false,
+    veil: true,
+  },
+  {
+    feature: "Local Key Storage",
     standardWallet: true,
     privacyTool: false,
     veil: true,
@@ -61,8 +73,8 @@ export const ComparisonSection = () => {
             Best of <span className="text-primary">Both Worlds</span>
           </h2>
           <p className="section-subtitle mx-auto reveal-up">
-            Veil combines the convenience of browser wallets with the privacy 
-            of dedicated mixing protocols.
+            Veil combines the convenience of browser wallets with privacy-first
+            design—own your on-chain identity.
           </p>
         </div>
 
@@ -78,7 +90,9 @@ export const ComparisonSection = () => {
                 </colgroup>
                 <thead>
                   <tr>
-                    <th className="!text-left px-4 py-4 font-semibold text-foreground">Feature</th>
+                    <th className="!text-left px-4 py-4 font-semibold text-foreground">
+                      Feature
+                    </th>
                     <th className="!text-center px-4 py-4 font-semibold text-foreground">
                       Standard Wallet
                     </th>
@@ -93,7 +107,9 @@ export const ComparisonSection = () => {
                 <tbody>
                   {comparisons.map((row) => (
                     <tr key={row.feature} className="border-t border-border">
-                      <td className="font-medium text-foreground px-4 py-4">{row.feature}</td>
+                      <td className="font-medium text-foreground px-4 py-4">
+                        {row.feature}
+                      </td>
                       <td className="text-center px-4 py-4">
                         <div className="flex justify-center">
                           {row.standardWallet ? <CheckIcon /> : <XIcon />}

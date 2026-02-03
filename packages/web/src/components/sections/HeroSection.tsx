@@ -1,8 +1,8 @@
-import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Shield, ArrowRight, Sparkles } from 'lucide-react';
-import veilLogo from '@/assets/logo.png';
-import { DownloadExtensionDialog } from '@/components/DownloadExtensionDialog';
+import veilLogo from "@/assets/logo.png";
+import { DownloadExtensionDialog } from "@/components/DownloadExtensionDialog";
+import { motion } from "framer-motion";
+import { ArrowRight, Shield } from "lucide-react";
+import { useState } from "react";
 
 export const HeroSection = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -34,9 +34,9 @@ export const HeroSection = () => {
             transition={{ duration: 0.8, delay: 0.1 }}
             className="mb-2 animate-float"
           >
-            <img 
-              src={veilLogo} 
-              alt="Veil" 
+            <img
+              src={veilLogo}
+              alt="Veil"
               className="w-40 h-40 md:w-48 md:h-48 object-contain"
             />
           </motion.div>
@@ -60,8 +60,9 @@ export const HeroSection = () => {
             transition={{ duration: 0.8, delay: 0.3 }}
             className="text-lg md:text-xl text-muted-foreground max-w-2xl mb-10"
           >
-            Veil creates temporary burner wallets for each site—connect anywhere without risking your main wallet. 
-            Optional privacy pool for unlinkable transfers when you need extra privacy.
+            Privacy by default: private transfers and multi-chain swaps,
+            powered by site-bound burner wallets. Your on-chain identity never
+            gets exposed.
           </motion.p>
 
           {/* CTA Buttons */}
@@ -71,7 +72,7 @@ export const HeroSection = () => {
             transition={{ duration: 0.8, delay: 0.4 }}
             className="flex flex-col sm:flex-row gap-4"
           >
-            <button 
+            <button
               type="button"
               onClick={() => setIsDialogOpen(true)}
               className="btn-primary text-base px-8 py-4"
@@ -79,7 +80,10 @@ export const HeroSection = () => {
               <Shield className="w-5 h-5" />
               Install Veil Extension
             </button>
-            <a href="#how-exactly" className="btn-secondary text-base px-8 py-4">
+            <a
+              href="#how-exactly"
+              className="btn-secondary text-base px-8 py-4"
+            >
               See How It Works
               <ArrowRight className="w-5 h-5" />
             </a>
@@ -107,7 +111,10 @@ export const HeroSection = () => {
           </motion.div> */}
         </div>
       </div>
-      <DownloadExtensionDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} />
+      <DownloadExtensionDialog
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+      />
     </section>
   );
 };
