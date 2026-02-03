@@ -12,7 +12,10 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getKeypairForIndex } from "../utils/keyManager";
+import {
+  getEthereumWalletForIndex,
+  getKeypairForIndex,
+} from "../utils/keyManager";
 import { getPrivacyCashMode, setPrivacyCashMode } from "../utils/settings";
 import type { BurnerWallet } from "../utils/storage";
 import {
@@ -84,33 +87,39 @@ const Settings = () => {
         return;
       }
 
-      // Get keypair for the target wallet (using its index)
-      // This handles imported wallets correctly (index 0 uses imported keypair)
-      const walletKeypair = await getKeypairForIndex(
-        password,
-        targetWallet.index
-      );
-
-      // Verify the derived public key matches the stored address
-      const derivedPublicKey = walletKeypair.publicKey.toBase58();
-      if (derivedPublicKey !== targetWallet.fullAddress) {
-        console.error("[Veil] Public key mismatch:", {
-          derived: derivedPublicKey,
-          stored: targetWallet.fullAddress,
-          index: targetWallet.index,
-        });
-        setPasswordError("Key derivation mismatch. Please try again.");
-        setPassword("");
-        return;
+      if (targetWallet.network === "ethereum") {
+        const { address, privateKey: ethPrivateKey } =
+          await getEthereumWalletForIndex(password, targetWallet.index);
+        if (address.toLowerCase() !== targetWallet.fullAddress.toLowerCase()) {
+          console.error("[Veil] Ethereum address mismatch:", {
+            derived: address,
+            stored: targetWallet.fullAddress,
+            index: targetWallet.index,
+          });
+          setPasswordError("Key derivation mismatch. Please try again.");
+          setPassword("");
+          return;
+        }
+        setPrivateKey(ethPrivateKey);
+      } else {
+        const walletKeypair = await getKeypairForIndex(
+          password,
+          targetWallet.index
+        );
+        const derivedPublicKey = walletKeypair.publicKey.toBase58();
+        if (derivedPublicKey !== targetWallet.fullAddress) {
+          console.error("[Veil] Public key mismatch:", {
+            derived: derivedPublicKey,
+            stored: targetWallet.fullAddress,
+            index: targetWallet.index,
+          });
+          setPasswordError("Key derivation mismatch. Please try again.");
+          setPassword("");
+          return;
+        }
+        const secretKeyBytes = new Uint8Array(walletKeypair.secretKey);
+        setPrivateKey(bs58.encode(secretKeyBytes));
       }
-
-      // Export full secretKey in Base58 format (Phantom import format)
-      // Phantom expects the full 64-byte secretKey in Base58
-      // secretKey format: [32 bytes private key][32 bytes public key]
-      const secretKeyBytes = new Uint8Array(walletKeypair.secretKey);
-      const secretKeyBase58 = bs58.encode(secretKeyBytes);
-
-      setPrivateKey(secretKeyBase58);
       setPassword("");
     } catch {
       setPasswordError("Incorrect password. Please try again.");

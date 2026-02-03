@@ -1,16 +1,13 @@
 /**
  * Balance Monitor Service
- * 
- * Monitors burner wallet addresses for incoming SOL deposits
- * and updates stored balances accordingly.
+ * Monitors burner wallet addresses for SOL (Solana) and ETH (Ethereum) balances.
  */
 
 import { PublicKey } from "@solana/web3.js";
+import type { NetworkType } from "../types";
+import { getEthBalance, weiToEth } from "./ethRpcManager";
 import { createRPCManager, RPCManager } from "./rpcManager";
-import {
-  getAllBurnerWallets,
-  storeBurnerWallet,
-} from "./storage";
+import { getAllBurnerWallets, storeBurnerWallet } from "./storage";
 import {
   generateTransactionId,
   storeTransaction,
@@ -23,20 +20,18 @@ interface BalanceUpdate {
   previousBalance: number;
 }
 
+function balanceKey(network: NetworkType, index: number): string {
+  return `${network}:${index}`;
+}
+
 class BalanceMonitor {
   private rpcManager: RPCManager | null = null;
   private monitoringInterval: ReturnType<typeof setInterval> | null = null;
   private isMonitoring: boolean = false;
-  private lastCheckedBalances: Map<number, number> = new Map();
+  private lastCheckedBalances: Map<string, number> = new Map();
 
-  /**
-   * Initialize the balance monitor
-   */
   async initialize(): Promise<void> {
-    if (this.rpcManager) {
-      return; // Already initialized
-    }
-
+    if (this.rpcManager) return;
     try {
       this.rpcManager = createRPCManager();
       console.log("[BalanceMonitor] Initialized");
@@ -47,42 +42,41 @@ class BalanceMonitor {
   }
 
   /**
-   * Check balances for all burner wallets
+   * Check balances for all burner wallets (Solana and Ethereum).
    */
   async checkBalances(): Promise<BalanceUpdate[]> {
-    if (!this.rpcManager) {
-      await this.initialize();
-    }
-
+    if (!this.rpcManager) await this.initialize();
     const wallets = await getAllBurnerWallets();
     const updates: BalanceUpdate[] = [];
 
-    if (wallets.length === 0) {
-      return updates;
-    }
+    if (wallets.length === 0) return updates;
 
     try {
-      // Check wallet balances sequentially with delay to avoid rate limits
       for (const wallet of wallets) {
+        const key = balanceKey(wallet.network, wallet.index);
         try {
-          const balance = await this.rpcManager!.executeWithRetry(
-            async (connection) => {
-              const publicKey = new PublicKey(wallet.fullAddress);
-              const balance = await connection.getBalance(publicKey);
-              return balance / 1e9; // Convert lamports to SOL
-            }
-          );
+          let balance: number;
+          if (wallet.network === "solana") {
+            balance = await this.rpcManager!.executeWithRetry(
+              async (connection) => {
+                const publicKey = new PublicKey(wallet.fullAddress);
+                const lamports = await connection.getBalance(publicKey);
+                return lamports / 1e9;
+              }
+            );
+          } else {
+            const wei = await getEthBalance(wallet.fullAddress);
+            balance = weiToEth(wei);
+          }
 
           const previousBalance = wallet.balance;
-          const lastChecked = this.lastCheckedBalances.get(wallet.index) ?? previousBalance;
+          const lastChecked =
+            this.lastCheckedBalances.get(key) ?? previousBalance;
 
-          // Only update if balance changed
           if (balance !== lastChecked) {
-            // Update stored wallet balance
             wallet.balance = balance;
             await storeBurnerWallet(wallet);
 
-            // Track the update
             if (balance !== previousBalance) {
               updates.push({
                 walletIndex: wallet.index,
@@ -90,34 +84,30 @@ class BalanceMonitor {
                 previousBalance: previousBalance,
               });
 
-              // Record incoming transaction if balance increased
               if (balance > previousBalance) {
                 const incomingAmount = balance - previousBalance;
                 const transaction: Transaction = {
                   id: generateTransactionId(),
-                  type: 'incoming',
+                  type: "incoming",
                   timestamp: Date.now(),
                   amount: incomingAmount,
                   toAddress: wallet.fullAddress,
                   walletIndex: wallet.index,
-                  status: 'confirmed',
+                  status: "confirmed",
                 };
                 await storeTransaction(transaction);
               }
             }
 
-            // Update last checked
-            this.lastCheckedBalances.set(wallet.index, balance);
+            this.lastCheckedBalances.set(key, balance);
           }
         } catch (error) {
           console.error(
-            `[BalanceMonitor] Error checking balance for wallet ${wallet.index}:`,
+            `[BalanceMonitor] Error checking balance for ${wallet.network} wallet ${wallet.index}:`,
             error
           );
-          // Continue to next wallet instead of failing all
         }
 
-        // Small delay between wallet checks to avoid rate limits
         if (wallets.length > 1) {
           await new Promise((resolve) => setTimeout(resolve, 500));
         }
@@ -150,7 +140,7 @@ class BalanceMonitor {
     const envInterval = import.meta.env.VITE_BALANCE_CHECK_INTERVAL_MS
       ? parseInt(import.meta.env.VITE_BALANCE_CHECK_INTERVAL_MS, 10)
       : undefined;
-    
+
     const finalInterval = intervalMs ?? envInterval ?? 30000;
 
     // Validate interval (minimum 5 seconds, maximum 5 minutes)
@@ -169,7 +159,10 @@ class BalanceMonitor {
     // Set up interval (use global setInterval in service worker context)
     this.monitoringInterval = setInterval(() => {
       this.checkBalances().catch((error) => {
-        console.error("[BalanceMonitor] Error in periodic balance check:", error);
+        console.error(
+          "[BalanceMonitor] Error in periodic balance check:",
+          error
+        );
       });
     }, validatedInterval);
   }

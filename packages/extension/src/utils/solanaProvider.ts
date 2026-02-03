@@ -3,11 +3,11 @@
  * Provides window.solana API compatibility for dApp connections
  */
 
-import { Keypair, PublicKey, VersionedTransaction } from '@solana/web3.js';
-import nacl from 'tweetnacl';
-import { getAllBurnerWallets } from './storage';
-import { getKeypairForIndex } from './keyManager';
-import { isWalletLocked, isSessionValid } from './walletLock';
+import { Keypair, PublicKey, VersionedTransaction } from "@solana/web3.js";
+import nacl from "tweetnacl";
+import { getKeypairForIndex } from "./keyManager";
+import { getActiveBurnerWallet as getActiveBurnerWalletFromStorage } from "./storage";
+import { isSessionValid, isWalletLocked } from "./walletLock";
 
 export interface ProviderAccount {
   address: string;
@@ -29,24 +29,25 @@ export interface SignMessageResponse {
 }
 
 /**
- * Get the active burner wallet
+ * Get the active Solana burner wallet (for window.solana provider)
  */
 export async function getActiveBurnerWallet() {
-  const wallets = await getAllBurnerWallets();
-  const activeWallet = wallets.find((w) => w.isActive && !w.archived);
-  
-  if (!activeWallet) {
-    throw new Error('No active wallet found. Please generate a burner wallet first.');
+  const active = await getActiveBurnerWalletFromStorage("solana");
+  if (!active) {
+    throw new Error(
+      "No active wallet found. Please generate a burner wallet first."
+    );
   }
-  
-  return activeWallet;
+  return active;
 }
 
 /**
  * Get keypair for active wallet
  * Requires password to decrypt seed
  */
-export async function getActiveWalletKeypair(password: string): Promise<Keypair> {
+export async function getActiveWalletKeypair(
+  password: string
+): Promise<Keypair> {
   const activeWallet = await getActiveBurnerWallet();
   return getKeypairForIndex(password, activeWallet.index);
 }
@@ -57,7 +58,7 @@ export async function getActiveWalletKeypair(password: string): Promise<Keypair>
 export async function checkWalletUnlocked(): Promise<boolean> {
   const locked = await isWalletLocked();
   if (locked) return false;
-  
+
   const valid = await isSessionValid();
   return valid;
 }
@@ -84,7 +85,7 @@ export async function signMessageWithActiveWallet(
   password: string
 ): Promise<Uint8Array> {
   const keypair = await getActiveWalletKeypair(password);
-  
+
   // Solana message signing using nacl.sign.detached
   // keypair.secretKey is 64 bytes: 32 bytes seed + 32 bytes public key
   const signature = nacl.sign.detached(message, keypair.secretKey);

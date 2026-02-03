@@ -1,7 +1,14 @@
 // Centralized types for the extension
 
+/** Supported chain: Solana (mainnet) or Ethereum (mainnet). Private transfers only on Solana. */
+export type NetworkType = "solana" | "ethereum";
+
 // Message types
-export type MessageType = 'checkBalances' | 'providerRequest' | 'connectionApproval' | 'signApproval';
+export type MessageType =
+  | "checkBalances"
+  | "providerRequest"
+  | "connectionApproval"
+  | "signApproval";
 
 // Base message interface
 export interface BaseMessage {
@@ -10,31 +17,35 @@ export interface BaseMessage {
 
 // Specific message interfaces
 export interface CheckBalancesMessage extends BaseMessage {
-  type: 'checkBalances';
+  type: "checkBalances";
 }
 
 export interface ProviderRequestMessage extends BaseMessage {
-  type: 'providerRequest';
+  type: "providerRequest";
   method: string;
   params?: unknown[];
   id: number;
 }
 
 export interface ConnectionApprovalMessage extends BaseMessage {
-  type: 'connectionApproval';
+  type: "connectionApproval";
   requestId: string;
   approved: boolean;
   publicKey?: string;
 }
 
 export interface SignApprovalMessage extends BaseMessage {
-  type: 'signApproval';
+  type: "signApproval";
   requestId: string;
   approved: boolean;
 }
 
 // Union type for all messages
-export type ExtensionMessage = CheckBalancesMessage | ProviderRequestMessage | ConnectionApprovalMessage | SignApprovalMessage;
+export type ExtensionMessage =
+  | CheckBalancesMessage
+  | ProviderRequestMessage
+  | ConnectionApprovalMessage
+  | SignApprovalMessage;
 
 // Response types
 export interface BalanceUpdate {

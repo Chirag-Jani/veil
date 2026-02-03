@@ -2,8 +2,10 @@
  * Storage utilities for wallet state management
  */
 
-import type { Keypair } from '@solana/web3.js';
-import { retireBurner } from './keyManager';
+import type { Keypair } from "@solana/web3.js";
+import type { NetworkType } from "../types";
+import { retireBurner } from "./keyManager";
+import { getActiveBurnerIndex } from "./settings";
 
 export interface BurnerWallet {
   id: number;
@@ -13,6 +15,7 @@ export interface BurnerWallet {
   site: string;
   isActive: boolean;
   index: number; // HD wallet derivation index
+  network: NetworkType;
   archived?: boolean; // Whether the wallet is archived
 }
 
@@ -35,7 +38,7 @@ export interface PendingConnectionRequest {
 export interface PendingSignRequest {
   id: string;
   origin: string;
-  type: 'transaction' | 'message' | 'allTransactions';
+  type: "transaction" | "message" | "allTransactions";
   data: {
     transaction?: number[]; // Serialized transaction
     transactions?: number[][]; // For signAllTransactions
@@ -49,8 +52,8 @@ export interface PendingSignRequest {
  * Format Solana address for display
  */
 export function formatAddress(address: string, chars: number = 4): string {
-  if (!address || typeof address !== 'string') {
-    return '';
+  if (!address || typeof address !== "string") {
+    return "";
   }
   if (address.length <= chars * 2 + 3) return address;
   return `${address.slice(0, chars)}...${address.slice(-chars)}`;
@@ -63,87 +66,158 @@ export function getAddressFromKeypair(keypair: Keypair): string {
   return keypair.publicKey.toBase58();
 }
 
+/** Storage key prefix for burners: veil:burner:{network}:{index} or legacy veil:burner:{index} */
+function burnerKey(network: NetworkType, index: number): string {
+  return `veil:burner:${network}:${index}`;
+}
+
 /**
  * Store burner wallet data
  */
 export async function storeBurnerWallet(wallet: BurnerWallet): Promise<void> {
-  const key = `veil:burner:${wallet.index}`;
+  const key = burnerKey(wallet.network, wallet.index);
   await chrome.storage.local.set({ [key]: wallet });
 }
 
 /**
- * Get all burner wallets (excluding archived)
+ * Get all burner wallets (excluding archived). If network is provided, only that network; otherwise all.
+ * Legacy keys veil:burner:{index} (no network) are treated as Solana.
  */
-export async function getAllBurnerWallets(): Promise<BurnerWallet[]> {
-  // Defensive check for chrome.storage availability
+export async function getAllBurnerWallets(
+  network?: NetworkType
+): Promise<BurnerWallet[]> {
   if (!chrome?.storage?.local) {
     console.error("[Storage] chrome.storage.local is not available");
     return [];
   }
-  
+
   const allData = await chrome.storage.local.get(null);
-  
-  if (!allData || typeof allData !== 'object') {
+  if (!allData || typeof allData !== "object") {
     console.error("[Storage] Invalid storage data");
     return [];
   }
-  
+
   const wallets: BurnerWallet[] = [];
 
   for (const [key, value] of Object.entries(allData)) {
-    if (key.startsWith('veil:burner:')) {
-      const wallet = value as BurnerWallet;
-      // Only include non-archived wallets
-      if (!wallet.archived) {
-        wallets.push(wallet);
-      }
+    if (!key.startsWith("veil:burner:")) continue;
+    const wallet = value as BurnerWallet;
+    if (wallet.archived) continue;
+
+    // New format: veil:burner:solana:0 or veil:burner:ethereum:0
+    const newMatch = key.match(/^veil:burner:(solana|ethereum):(\d+)$/);
+    if (newMatch) {
+      const walletNetwork = newMatch[1] as NetworkType;
+      if (network !== undefined && walletNetwork !== network) continue;
+      wallets.push({ ...wallet, network: walletNetwork });
+      continue;
+    }
+
+    // Legacy format: veil:burner:0 (Solana only)
+    const legacyMatch = key.match(/^veil:burner:(\d+)$/);
+    if (legacyMatch) {
+      if (network !== undefined && network !== "solana") continue;
+      wallets.push({ ...wallet, network: "solana" });
     }
   }
 
-  return wallets.sort((a, b) => b.id - a.id); // Most recent first
+  const sorted = wallets.sort((a, b) => b.id - a.id);
+
+  // Set isActive from active index per network
+  if (network !== undefined) {
+    const activeIndex = await getActiveBurnerIndex(network);
+    return sorted.map((w) => ({
+      ...w,
+      isActive:
+        activeIndex !== null
+          ? w.index === activeIndex
+          : sorted[0]?.index === w.index,
+    }));
+  }
+
+  // When returning all networks, set isActive per network
+  const out: BurnerWallet[] = [];
+  for (const w of sorted) {
+    const activeIndex = await getActiveBurnerIndex(w.network);
+    out.push({
+      ...w,
+      isActive: activeIndex !== null ? w.index === activeIndex : false,
+    });
+  }
+  return out;
 }
 
 /**
- * Get all archived burner wallets
+ * Get active burner wallet for a network
  */
-export async function getArchivedBurnerWallets(): Promise<BurnerWallet[]> {
+export async function getActiveBurnerWallet(
+  network: NetworkType
+): Promise<BurnerWallet | null> {
+  const wallets = await getAllBurnerWallets(network);
+  const active = wallets.find((w) => w.isActive);
+  if (active) return active;
+  return wallets[0] ?? null;
+}
+
+/**
+ * Get all archived burner wallets. If network provided, only that network.
+ */
+export async function getArchivedBurnerWallets(
+  network?: NetworkType
+): Promise<BurnerWallet[]> {
   const allData = await chrome.storage.local.get(null);
   const wallets: BurnerWallet[] = [];
 
   for (const [key, value] of Object.entries(allData)) {
-    if (key.startsWith('veil:burner:')) {
-      const wallet = value as BurnerWallet;
-      // Only include archived wallets
-      if (wallet.archived) {
-        wallets.push(wallet);
-      }
-    }
+    if (!key.startsWith("veil:burner:")) continue;
+    const wallet = value as BurnerWallet & { network?: NetworkType };
+    if (!wallet.archived) continue;
+    const newFormat = key.match(/^veil:burner:(solana|ethereum):(\d+)$/);
+    const net: NetworkType = newFormat
+      ? (newFormat[1] as NetworkType)
+      : "solana";
+    if (network !== undefined && net !== network) continue;
+    wallets.push({ ...wallet, network: net } as BurnerWallet);
   }
 
-  return wallets.sort((a, b) => b.id - a.id); // Most recent first
+  return wallets.sort((a, b) => b.id - a.id);
 }
 
 /**
- * Archive a burner wallet
+ * Archive a burner wallet (requires network for key)
  */
-export async function archiveBurnerWallet(walletIndex: number): Promise<void> {
-  const key = `veil:burner:${walletIndex}`;
+export async function archiveBurnerWallet(
+  walletIndex: number,
+  network: NetworkType
+): Promise<void> {
+  const key = burnerKey(network, walletIndex);
   const result = await chrome.storage.local.get(key);
   if (result[key]) {
     const wallet = result[key] as BurnerWallet;
     wallet.archived = true;
-    wallet.isActive = false; // Deactivate when archiving
+    wallet.isActive = false;
     await chrome.storage.local.set({ [key]: wallet });
-    // Explicitly retire this burner index so it is never reused
-    await retireBurner(walletIndex);
+    await retireBurner(walletIndex, network);
+  }
+  const legacyKey = `veil:burner:${walletIndex}`;
+  const legacy = await chrome.storage.local.get(legacyKey);
+  if (legacy[legacyKey] && network === "solana") {
+    const wallet = legacy[legacyKey] as BurnerWallet;
+    wallet.archived = true;
+    wallet.isActive = false;
+    await chrome.storage.local.set({ [legacyKey]: wallet });
+    await retireBurner(walletIndex, "solana");
   }
 }
 
 /**
  * Unarchive a burner wallet
  */
-export async function unarchiveBurnerWallet(walletIndex: number): Promise<void> {
-  const key = `veil:burner:${walletIndex}`;
+export async function unarchiveBurnerWallet(
+  walletIndex: number,
+  network: NetworkType
+): Promise<void> {
+  const key = burnerKey(network, walletIndex);
   const result = await chrome.storage.local.get(key);
   if (result[key]) {
     const wallet = result[key] as BurnerWallet;
@@ -153,36 +227,32 @@ export async function unarchiveBurnerWallet(walletIndex: number): Promise<void> 
 }
 
 /**
- * Get the next account number for naming (Account 1, Account 2, etc.)
- * Includes archived wallets in the count
+ * Get the next account number for naming (Account 1, Account 2, etc.) for a network.
  */
-export async function getNextAccountNumber(): Promise<number> {
+export async function getNextAccountNumber(
+  network: NetworkType
+): Promise<number> {
   const allData = await chrome.storage.local.get(null);
-  const wallets: BurnerWallet[] = [];
+  const wallets: (BurnerWallet & { network?: NetworkType })[] = [];
 
-  // Get all wallets (including archived) for account numbering
   for (const [key, value] of Object.entries(allData)) {
-    if (key.startsWith('veil:burner:')) {
-      wallets.push(value as BurnerWallet);
-    }
+    if (!key.startsWith("veil:burner:")) continue;
+    const w = value as BurnerWallet & { network?: NetworkType };
+    const newFormat = key.match(/^veil:burner:(solana|ethereum):/);
+    const n: NetworkType = newFormat ? (newFormat[1] as NetworkType) : "solana";
+    if (n !== network) continue;
+    wallets.push({ ...w, network: n });
   }
-  
-  // Extract account numbers from existing wallets
+
   const accountNumbers = wallets
-    .map(w => {
-      // Check if site matches "Account X" pattern
+    .map((w) => {
       const match = w.site.match(/^Account (\d+)$/);
       return match ? parseInt(match[1], 10) : null;
     })
     .filter((num): num is number => num !== null);
-  
-  if (accountNumbers.length === 0) {
-    return 1; // Start with Account 1
-  }
-  
-  // Find the next available number
-  const maxAccount = Math.max(...accountNumbers);
-  return maxAccount + 1;
+
+  if (accountNumbers.length === 0) return 1;
+  return Math.max(...accountNumbers) + 1;
 }
 
 /**
@@ -204,7 +274,7 @@ export async function getAllConnectedSites(): Promise<ConnectedSite[]> {
   const sites: ConnectedSite[] = [];
 
   for (const [key, value] of Object.entries(allData)) {
-    if (key.startsWith('veil:site:')) {
+    if (key.startsWith("veil:site:")) {
       sites.push(value as ConnectedSite);
     }
   }
@@ -215,7 +285,9 @@ export async function getAllConnectedSites(): Promise<ConnectedSite[]> {
 /**
  * Get connected site by domain
  */
-export async function getConnectedSite(domain: string): Promise<ConnectedSite | null> {
+export async function getConnectedSite(
+  domain: string
+): Promise<ConnectedSite | null> {
   if (!chrome?.storage?.local) {
     console.error("[Storage] chrome.storage.local is not available");
     return null;
@@ -244,7 +316,9 @@ export async function isSiteConnected(domain: string): Promise<boolean> {
 /**
  * Store pending connection request
  */
-export async function storePendingConnection(request: PendingConnectionRequest): Promise<void> {
+export async function storePendingConnection(
+  request: PendingConnectionRequest
+): Promise<void> {
   if (!chrome?.storage?.local) {
     throw new Error("chrome.storage.local is not available");
   }
@@ -255,7 +329,9 @@ export async function storePendingConnection(request: PendingConnectionRequest):
 /**
  * Get pending connection request
  */
-export async function getPendingConnection(id: string): Promise<PendingConnectionRequest | null> {
+export async function getPendingConnection(
+  id: string
+): Promise<PendingConnectionRequest | null> {
   const key = `veil:pending_connection:${id}`;
   const result = await chrome.storage.local.get(key);
   return result[key] || null;
@@ -264,12 +340,14 @@ export async function getPendingConnection(id: string): Promise<PendingConnectio
 /**
  * Get all pending connection requests
  */
-export async function getAllPendingConnections(): Promise<PendingConnectionRequest[]> {
+export async function getAllPendingConnections(): Promise<
+  PendingConnectionRequest[]
+> {
   const allData = await chrome.storage.local.get(null);
   const requests: PendingConnectionRequest[] = [];
 
   for (const [key, value] of Object.entries(allData)) {
-    if (key.startsWith('veil:pending_connection:')) {
+    if (key.startsWith("veil:pending_connection:")) {
       requests.push(value as PendingConnectionRequest);
     }
   }
@@ -288,7 +366,11 @@ export async function removePendingConnection(id: string): Promise<void> {
 /**
  * Store connection approval result
  */
-export async function storeConnectionApproval(id: string, approved: boolean, publicKey?: string): Promise<void> {
+export async function storeConnectionApproval(
+  id: string,
+  approved: boolean,
+  publicKey?: string
+): Promise<void> {
   if (!chrome?.storage?.local) {
     throw new Error("chrome.storage.local is not available");
   }
@@ -296,19 +378,27 @@ export async function storeConnectionApproval(id: string, approved: boolean, pub
     throw new Error("Connection request ID is required");
   }
   const key = `veil:connection_result:${id}`;
-  console.log("[Storage] Storing connection approval:", { id, approved, publicKey });
-  await chrome.storage.local.set({ [key]: { approved, publicKey, timestamp: Date.now() } });
+  console.log("[Storage] Storing connection approval:", {
+    id,
+    approved,
+    publicKey,
+  });
+  await chrome.storage.local.set({
+    [key]: { approved, publicKey, timestamp: Date.now() },
+  });
 }
 
 /**
  * Get connection approval result
  */
-export async function getConnectionApproval(id: string): Promise<{ approved: boolean; publicKey?: string } | null> {
+export async function getConnectionApproval(
+  id: string
+): Promise<{ approved: boolean; publicKey?: string } | null> {
   if (!chrome?.storage?.local) {
     console.error("[Storage] chrome.storage.local is not available");
     return null;
   }
-  
+
   const key = `veil:connection_result:${id}`;
   const result = await chrome.storage.local.get(key);
   return result?.[key] || null;
@@ -325,7 +415,9 @@ export async function removeConnectionApproval(id: string): Promise<void> {
 /**
  * Store pending sign request
  */
-export async function storePendingSignRequest(request: PendingSignRequest): Promise<void> {
+export async function storePendingSignRequest(
+  request: PendingSignRequest
+): Promise<void> {
   if (!chrome?.storage?.local) {
     throw new Error("chrome.storage.local is not available");
   }
@@ -336,7 +428,9 @@ export async function storePendingSignRequest(request: PendingSignRequest): Prom
 /**
  * Get pending sign request
  */
-export async function getPendingSignRequest(id: string): Promise<PendingSignRequest | null> {
+export async function getPendingSignRequest(
+  id: string
+): Promise<PendingSignRequest | null> {
   if (!chrome?.storage?.local) {
     console.error("[Storage] chrome.storage.local is not available");
     return null;
@@ -349,7 +443,9 @@ export async function getPendingSignRequest(id: string): Promise<PendingSignRequ
 /**
  * Get all pending sign requests
  */
-export async function getAllPendingSignRequests(): Promise<PendingSignRequest[]> {
+export async function getAllPendingSignRequests(): Promise<
+  PendingSignRequest[]
+> {
   if (!chrome?.storage?.local) {
     return [];
   }
@@ -357,7 +453,7 @@ export async function getAllPendingSignRequests(): Promise<PendingSignRequest[]>
   const requests: PendingSignRequest[] = [];
 
   for (const [key, value] of Object.entries(allData)) {
-    if (key.startsWith('veil:pending_sign:')) {
+    if (key.startsWith("veil:pending_sign:")) {
       requests.push(value as PendingSignRequest);
     }
   }
@@ -376,7 +472,10 @@ export async function removePendingSignRequest(id: string): Promise<void> {
 /**
  * Store sign approval result
  */
-export async function storeSignApproval(id: string, approved: boolean): Promise<void> {
+export async function storeSignApproval(
+  id: string,
+  approved: boolean
+): Promise<void> {
   if (!chrome?.storage?.local) {
     throw new Error("chrome.storage.local is not available");
   }
@@ -384,13 +483,17 @@ export async function storeSignApproval(id: string, approved: boolean): Promise<
     throw new Error("Sign request ID is required");
   }
   const key = `veil:sign_result:${id}`;
-  await chrome.storage.local.set({ [key]: { approved, timestamp: Date.now() } });
+  await chrome.storage.local.set({
+    [key]: { approved, timestamp: Date.now() },
+  });
 }
 
 /**
  * Get sign approval result
  */
-export async function getSignApproval(id: string): Promise<{ approved: boolean } | null> {
+export async function getSignApproval(
+  id: string
+): Promise<{ approved: boolean } | null> {
   if (!chrome?.storage?.local) {
     console.error("[Storage] chrome.storage.local is not available");
     return null;
@@ -411,7 +514,10 @@ export async function removeSignApproval(id: string): Promise<void> {
 /**
  * Store private balance for a wallet
  */
-export async function storePrivateBalance(walletIndex: number, balance: number): Promise<void> {
+export async function storePrivateBalance(
+  walletIndex: number,
+  balance: number
+): Promise<void> {
   const key = `veil:private_balance:${walletIndex}`;
   await chrome.storage.local.set({ [key]: balance });
 }
