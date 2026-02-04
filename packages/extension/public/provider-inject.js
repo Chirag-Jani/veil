@@ -301,6 +301,96 @@
   
   // Expose window.veil as the main namespace
   window.veil = veilProvider;
+
+  /**
+   * EIP-1193 Ethereum provider (minimal) for dapps that require window.ethereum.
+   * This does NOT override an existing injected provider (e.g. MetaMask).
+   */
+  function createVeilEthereumProvider() {
+    const eth = {
+      _isVeilEthereum: true,
+      isVeil: true,
+      isMetaMask: false,
+
+      // Basic event handlers (EIP-1193)
+      _eventHandlers: new Map(),
+
+      request: async ({ method, params } = {}) => {
+        if (!method || typeof method !== 'string') {
+          throw new Error('Invalid request method');
+        }
+        // Pass through to background via content-script bridge.
+        return sendRequest(method, params);
+      },
+
+      // Legacy alias used by some libraries
+      enable: async () => {
+        const accounts = await eth.request({ method: 'eth_requestAccounts' });
+        return accounts;
+      },
+
+      // EventEmitter-like API expected by many dapps
+      on: function (event, handler) {
+        if (typeof handler !== 'function') throw new Error('Handler must be a function');
+        if (!this._eventHandlers.has(event)) this._eventHandlers.set(event, new Set());
+        this._eventHandlers.get(event).add(handler);
+      },
+
+      removeListener: function (event, handler) {
+        this._eventHandlers.get(event)?.delete(handler);
+      },
+
+      // Some libs call off()
+      off: function (event, handler) {
+        this.removeListener(event, handler);
+      },
+
+      // Minimal helpers
+      isConnected: () => true,
+    };
+
+    eth._emit = function (event, ...args) {
+      const handlers = eth._eventHandlers.get(event);
+      if (!handlers) return;
+      handlers.forEach((h) => {
+        try {
+          h(...args);
+        } catch (e) {
+          console.error('[Veil Ethereum] Error in event handler:', e);
+        }
+      });
+    };
+
+    return eth;
+  }
+
+  // Expose window.ethereum if not already present
+  if (!window.ethereum) {
+    const veilEthereum = createVeilEthereumProvider();
+    window.ethereum = veilEthereum;
+    window.veilEthereum = veilEthereum;
+
+    // Signal for consumers waiting on injection (used by some detection logic)
+    try {
+      window.dispatchEvent(new Event('ethereum#initialized'));
+    } catch {
+      // ignore
+    }
+  } else {
+    // If an Ethereum provider already exists, keep it and optionally register ourselves
+    // under window.ethereum.providers for multi-provider consumers.
+    try {
+      const existing = window.ethereum;
+      const veilEthereum = createVeilEthereumProvider();
+      window.veilEthereum = veilEthereum;
+      if (Array.isArray(existing.providers)) {
+        const hasVeil = existing.providers.some((p) => p && p._isVeilEthereum);
+        if (!hasVeil) existing.providers.push(veilEthereum);
+      }
+    } catch {
+      // ignore
+    }
+  }
   
   /**
    * Register with window.solana.providers if window.solana exists

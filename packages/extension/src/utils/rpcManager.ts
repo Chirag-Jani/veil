@@ -6,6 +6,7 @@
  */
 
 import { Connection } from "@solana/web3.js";
+import { SOLANA_RPCS } from "../config/rpcs";
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 3000;
@@ -131,27 +132,9 @@ export class RPCManager {
   }
 }
 
-const DEFAULT_SOLANA_RPCS = ["https://api.mainnet-beta.solana.com"];
-
-function parseEnvRpcs(envKey: string): string[] {
-  try {
-    const raw = import.meta.env[envKey];
-    if (raw && typeof raw === "string") {
-      return raw
-        .split(",")
-        .map((u: string) => u.trim())
-        .filter((u: string) => u.length > 0);
-    }
-  } catch {
-    // ignore
-  }
-  return [];
-}
+const DEFAULT_SOLANA_RPCS = [...SOLANA_RPCS];
 
 export function createRPCManager(): RPCManager {
-  let urls = parseEnvRpcs("VITE_SOLANA_RPCS");
-  if (urls.length === 0) {
-    urls = DEFAULT_SOLANA_RPCS;
-  }
+  const urls = DEFAULT_SOLANA_RPCS;
   return new RPCManager({ rpcUrls: urls });
 }

@@ -26,6 +26,9 @@ lerna-debug.log*
 packages/*/.env.local
 packages/*/.env.*.local
 
+# Local RPC lists (keep secrets/provider keys out of git)
+packages/extension/src/config/rpcs.ts
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
