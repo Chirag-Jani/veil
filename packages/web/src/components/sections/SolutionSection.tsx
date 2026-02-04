@@ -171,8 +171,8 @@ export const SolutionSection = () => {
             </span>
           </h2>
           <p className="text-zinc-400 text-lg leading-relaxed">
-            1. Privacy by default—private transfers and multi-chain swaps. 2.
-            Site-bound burner wallets. Every interaction stays secure and
+            1. Privacy by default—private transfers on Ethereum and Solana. 2.
+            Burner wallets per site. Every interaction stays secure and
             unlinkable.
           </p>
         </div>
@@ -304,7 +304,7 @@ export const SolutionSection = () => {
                 Protocol Agnostic
               </h4>
               <p className="text-xs text-zinc-500 mt-1 max-w-[150px]">
-                Ready for the multi-chain privacy future.
+                One wallet. Ethereum + Solana. Privacy by default.
               </p>
             </div>
             {/* Abstract Decor */}

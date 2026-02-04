@@ -9,7 +9,7 @@ const faqs = [
   {
     question: "How does Veil protect my privacy?",
     answer:
-      "Veil gives you privacy by default: private transfers and multi-chain swaps via privacy pools and zero-knowledge proofs, and site-bound burner wallets so each site gets a unique address and your activity can't be linked.",
+      "Veil gives you privacy by default: private transfers on Ethereum and Solana (Solana live, Ethereum coming) via privacy pools and zero-knowledge proofs, and burner wallets so each site gets a unique address and your activity can't be linked.",
   },
   {
     question: "Is Veil non-custodial?",
@@ -34,7 +34,7 @@ const faqs = [
   {
     question: "How much does Veil cost?",
     answer:
-      "Veil is free to use. You only pay standard Solana network fees for transactions.",
+      "Veil is free to use. You only pay standard network fees (Ethereum gas or Solana fees) for transactions.",
   },
 ];
 

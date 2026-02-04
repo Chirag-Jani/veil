@@ -73,8 +73,9 @@ export const ComparisonSection = () => {
             Best of <span className="text-primary">Both Worlds</span>
           </h2>
           <p className="section-subtitle mx-auto reveal-up">
-            Veil combines the convenience of browser wallets with privacy-first
-            design—own your on-chain identity.
+            Veil is a multi-chain privacy wallet (Ethereum + Solana) with privacy by
+            default—private transfers and burner identities so you own your
+            on-chain identity.
           </p>
         </div>
 

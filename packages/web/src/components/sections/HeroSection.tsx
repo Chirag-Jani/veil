@@ -17,15 +17,15 @@ export const HeroSection = () => {
       <div className="section-container relative z-10">
         <div className="flex flex-col items-center text-center max-w-4xl mx-auto">
           {/* Badge */}
-          {/* <motion.div
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
             className="hero-badge mb-8"
           >
-            <Sparkles className="w-4 h-4" />
-            <span>Privacy-First Wallet for Solana</span>
-          </motion.div> */}
+            <Shield className="w-4 h-4" />
+            <span>Privacy by default · Multi-chain (EVM + Solana)</span>
+          </motion.div>
 
           {/* Logo */}
           <motion.div
@@ -60,9 +60,9 @@ export const HeroSection = () => {
             transition={{ duration: 0.8, delay: 0.3 }}
             className="text-lg md:text-xl text-muted-foreground max-w-2xl mb-10"
           >
-            Privacy by default: private transfers and multi-chain swaps,
-            powered by site-bound burner wallets. Your on-chain identity never
-            gets exposed.
+            Privacy by default: private transfers on Ethereum and Solana,
+            powered by burner wallets. Your on-chain identity never gets
+            exposed.
           </motion.p>
 
           {/* CTA Buttons */}

@@ -69,7 +69,7 @@ export const DownloadExtensionDialog = ({
                 What you get
               </p>
               <ul className="space-y-1.5 text-sm text-muted-foreground">
-                <li>• Privacy-first Solana wallet extension</li>
+                <li>• Privacy-by-default multi-chain wallet (Ethereum + Solana)</li>
                 <li>• Early access before public launch</li>
                 <li>• Direct line to share product feedback</li>
               </ul>

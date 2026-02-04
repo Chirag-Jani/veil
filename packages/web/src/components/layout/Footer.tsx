@@ -65,9 +65,9 @@ export const Footer = () => {
               />
               {/* <span className="text-xl font-bold font-display">Veil</span> */}
             </a>
-            {/* <p className="text-sm text-muted-foreground mb-4">
-              Privacy-first temporary wallets for Solana.
-            </p> */}
+            <p className="text-sm text-muted-foreground mb-4">
+              Privacy by default. Multi-chain wallet for Ethereum and Solana.
+            </p>
           </div>
 
           {/* Links */}
@@ -184,9 +184,9 @@ export const Footer = () => {
               <Github className="w-5 h-5" />
             </a>
           </div>
-          {/* <p className="text-sm text-muted-foreground">
-            Built for privacy. Powered by Solana.
-          </p> */}
+          <p className="text-sm text-muted-foreground">
+            Built for privacy. Ethereum + Solana.
+          </p>
         </div>
       </div>
       <DownloadExtensionDialog

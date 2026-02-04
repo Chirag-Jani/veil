@@ -4,7 +4,7 @@ const roadmapItems = [
     title: "Public Beta Launch",
     items: [
       "Chrome extension release",
-      "Solana mainnet support",
+      "Ethereum + Solana support",
       "Privacy pool integration",
     ],
     status: "current",
@@ -25,7 +25,7 @@ const roadmapItems = [
     items: [
       "Firefox & Brave extensions",
       "Mobile companion app",
-      "Additional privacy protocols",
+      "Ethereum private transfers & more protocols",
     ],
     status: "upcoming",
   },
@@ -51,7 +51,7 @@ export const RoadmapSection = () => {
             Building the <span className="text-primary">Future of Privacy</span>
           </h2>
           <p className="section-subtitle mx-auto reveal-up">
-            Our roadmap for making privacy accessible to every Solana user.
+            Our roadmap for making privacy accessible across Ethereum and Solana.
           </p>
         </div>
 

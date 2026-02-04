@@ -1,34 +1,33 @@
 # Veil
 
-> **A secure Solana wallet that uses one-time burner wallets for dApp connections—connect anywhere without risking your main wallet. Optional privacy pool for unlinkable transfers.**
+> **Privacy by default. Multi-chain wallet for Ethereum and Solana—private transfers and burner identities. Connect anywhere without risking your main wallet.**
 
-**Type:** Non-custodial Solana browser wallet extension  
-**Goal:** Connect anywhere without risking your main wallet
+**Type:** Non-custodial multi-chain browser wallet extension (EVM + Solana)  
+**Goal:** Privacy-first: private transfers and unlinkable activity across Ethereum and Solana
 
 ---
 
 ## The Problem
 
-- Users don't want to connect their main wallet to random websites.
-- Managing many test/burner wallets manually is painful.
-- Address reuse creates traceable on-chain identity graphs.
+- Users don't want to connect their main wallet to random websites—it ties identity to every site and leaves a public trail.
+- Managing many test/burner wallets manually is painful; address reuse builds a linkable identity graph.
+- Most wallets are single-chain or don't put privacy first; privacy is an afterthought.
 
 ---
 
 ## The Solution
 
-**One encrypted master seed. Unlimited deterministic burner wallets.**
+**One encrypted master seed. Unlimited burner wallets. Private transfers on EVM and Solana.**
 
-Veil lets you safely connect to any website using temporary, session-scoped burner wallets by default. Your main wallet stays hidden, and you control when and how to move funds.
+Veil is a **multi-chain privacy wallet** (Ethereum + Solana). You connect to dApps with disposable burner addresses; when you want unlinkable payments you use private transfers (privacy pools / private send). Same flow on both chains; privacy is the default promise, not an add-on.
 
 ---
 
 ## Core Concept
 
-The wallet manages **one locally encrypted master seed**.  
-From this seed, it deterministically derives **one-time burner wallets** using HD paths.
+**Privacy by default.** Private transfers and unlinkable activity are the product; burner wallets and multi-chain support that.
 
-Each burner wallet is:
+The wallet manages **one locally encrypted master seed**. From this seed it derives **one-time burner wallets** (HD paths). Each burner is:
 - **Session-scoped** — bound to a specific site
 - **Site-bound** — isolated per dApp
 - **Never reused** — once retired, a burner is gone
@@ -110,7 +109,7 @@ Each burner wallet is:
 
 ## Target Users
 
-- Privacy-conscious Solana users
+- Privacy-conscious users on Ethereum and Solana
 - DeFi explorers testing new protocols
 - NFT minters connecting to unknown sites
 - Airdrop hunters
@@ -121,12 +120,12 @@ Each burner wallet is:
 
 ## Positioning
 
-**Category:** Privacy tooling, not a mixer  
+**Category:** Multi-chain privacy wallet (EVM + Solana)  
 **Value proposition:**  
 
-> "Connect anywhere without risking your main wallet."
+> "Privacy by default. One wallet for Ethereum and Solana—private transfers and burner identities."
 
-Burner wallets provide site isolation and security by design. Optional privacy pool for unlinkable transfers when needed.
+Burner wallets provide site isolation and security by design. Private transfers (privacy pools) for unlinkable activity on Solana (live) and Ethereum (coming).
 
 ---
 
