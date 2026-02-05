@@ -1,0 +1,6 @@
+- Swap (UI shows “Coming soon”)
+- Solana transaction signing (`signTransaction` / `signAllTransactions` in dapp provider)
+- SPL token private balance (getPrivateBalanceSPL)
+- ETH/SOL transaction signing (both stubbed “coming soon”)
+- ETH typed data (eth_signTypedData\* stubbed “coming soon”)
+- Other eth RPC methods (e.g. eth_call, eth_blockNumber) — fall through to “Method not found”

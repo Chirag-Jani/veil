@@ -28,6 +28,7 @@ Veil is a **multi-chain privacy wallet** (Ethereum + Solana). You connect to dAp
 **Privacy by default.** Private transfers and unlinkable activity are the product; burner wallets and multi-chain support that.
 
 The wallet manages **one locally encrypted master seed**. From this seed it derives **one-time burner wallets** (HD paths). Each burner is:
+
 - **Session-scoped** — bound to a specific site
 - **Site-bound** — isolated per dApp
 - **Never reused** — once retired, a burner is gone
@@ -36,11 +37,11 @@ The wallet manages **one locally encrypted master seed**. From this seed it deri
 
 ## Burner Wallet Model
 
-| Condition | Behavior |
-|-----------|----------|
-| Balance > 0 | Reuse current burner for the site |
-| Balance == 0 | Auto-generate a new burner on unlock/open |
-| Funds drained | Burner marked retired, never reused |
+| Condition     | Behavior                                  |
+| ------------- | ----------------------------------------- |
+| Balance > 0   | Reuse current burner for the site         |
+| Balance == 0  | Auto-generate a new burner on unlock/open |
+| Funds drained | Burner marked retired, never reused       |
 
 - Burners are deterministically recoverable from the master seed.
 - No on-chain deletion required; privacy achieved via key non-reuse.
@@ -49,11 +50,11 @@ The wallet manages **one locally encrypted master seed**. From this seed it deri
 
 ## Website Connection Flow
 
-1. **Injection:** Extension injects `window.solana` as a provider proxy (coexists with other wallets via `window.solana.providers`).
+1. **Injection:** Extension injects providers for both chains: **Solana** — `window.solana` / `window.veil` (coexists with Phantom/Solflare via `window.solana.providers`); **Ethereum** — EIP-1193 `window.ethereum` (only if no other wallet is present) or `window.veilEthereum`.
 2. **Isolation:** dApps only ever see a burner wallet, never the master wallet.
 3. **Connection Approval:** Users must explicitly approve each site connection with a confirmation modal.
-4. **Message Signing:** Message signing is supported with user approval required for each request.
-5. **Transaction Signing:** Coming soon - transaction signing will be added in a future update.
+4. **Message Signing:** Supported on both chains with user approval per request (Solana: `signMessage`; Ethereum: `personal_sign`).
+5. **Transaction Signing:** Coming soon on both chains (Solana: `signTransaction` / `signAllTransactions`; Ethereum: `eth_sendTransaction` / `eth_signTransaction`).
 6. **No Exposure:** Private keys never leave the device.
 
 ---
@@ -62,14 +63,14 @@ The wallet manages **one locally encrypted master seed**. From this seed it deri
 
 - **Automatic Balance Monitoring:** Background service worker monitors all burner wallets for incoming SOL deposits (configurable interval, default: 30 seconds).
 - **Real-time Updates:** Wallet balances automatically update when new SOL arrives.
-- **Optional Private Transfers:** 
+- **Optional Private Transfers:**
   - **Toggle in Settings:** Enable when you want unlinkable on-chain transfers—burner wallets are the core security.
   - **When Enabled:**
     - **Deposit:** Move funds from burner wallets into a privacy pool for unlinkable transfers (fully tested ✅)
     - **Withdraw:** Move funds back to any wallet address (fully tested ✅, includes automatic retry for blockhash expiration)
     - **Private Balance:** Display of private balance from pool UTXOs
   - **When Disabled:** Normal wallet mode - shows regular SOL balance
-- **Transfer:** Transfer SOL between wallets with improved error handling and confirmation
+- **Transfer:** Transfer SOL or ETH between wallets with improved error handling and confirmation
 - **Real-time Price:** Dynamic SOL/USD price fetching from CoinGecko API
 - **Modern UI:** Compact, modern transaction history with detailed transaction views
 - No forced mixing — user-controlled flow.
@@ -78,12 +79,12 @@ The wallet manages **one locally encrypted master seed**. From this seed it deri
 
 ## Privacy Guarantees
 
-| Guarantee | How |
-|-----------|-----|
-| No address reuse | Fresh burner per session/site |
-| No wallet-to-wallet linking | Sites never see the master wallet |
+| Guarantee                   | How                                |
+| --------------------------- | ---------------------------------- |
+| No address reuse            | Fresh burner per session/site      |
+| No wallet-to-wallet linking | Sites never see the master wallet  |
 | Optional timing obfuscation | Randomized delays before transfers |
-| On-chain unlinkability | Optional privacy pool integration |
+| On-chain unlinkability      | Optional privacy pool integration  |
 
 **Privacy by Design:** Achieved through key isolation + automation, not user discipline.
 
@@ -121,7 +122,7 @@ The wallet manages **one locally encrypted master seed**. From this seed it deri
 ## Positioning
 
 **Category:** Multi-chain privacy wallet (EVM + Solana)  
-**Value proposition:**  
+**Value proposition:**
 
 > "Privacy by default. One wallet for Ethereum and Solana—private transfers and burner identities."
 
@@ -132,39 +133,46 @@ Burner wallets provide site isolation and security by design. Private transfers 
 ## Current Features
 
 ✅ **Wallet Management**
+
 - Master seed encryption and storage
 - Deterministic burner wallet generation
 - Wallet unlock/lock with session management
 - Multiple burner wallet support
 
 ✅ **dApp Integration**
-- `window.solana` provider injection (coexists with Phantom/Solflare)
-- Site connection with approval flow
+
+- **Solana:** `window.solana` / `window.veil` (coexists with Phantom/Solflare)
+- **Ethereum:** EIP-1193 provider (`window.ethereum` or `window.veilEthereum`) — connect, accounts, `personal_sign`; tx/typed-data stubbed “coming soon”
+- Site connection with approval flow (both chains)
 - Connected sites management
-- Message signing with user approval
+- Message signing with user approval (both chains)
 - Connection/disconnection handling
 
 ✅ **Optional Private Transfers**
+
 - Deposit to privacy pool (fully tested ✅)
 - Withdraw to any address (fully tested ✅)
 - Private balance display
 - Toggle in settings (optional add-on)
 
 ✅ **Balance & Monitoring**
-- Real-time balance monitoring (configurable interval)
-- Automatic balance updates
+
+- Real-time balance monitoring for burners (configurable interval)
+- Automatic balance updates (SOL and ETH)
 - SOL/USD price fetching
 - Transaction history tracking
 
 ⏳ **Coming Soon**
-- Transaction signing (signTransaction, signAllTransactions)
+
+- Transaction signing on both chains (Solana: signTransaction / signAllTransactions; Ethereum: eth_sendTransaction / eth_signTransaction)
+- ETH typed data signing (eth_signTypedData\*)
 - Enhanced transaction preview and analysis
 
 ## Tech Stack
 
 - **Frontend:** React, Vite, TailwindCSS, Framer Motion
-- **Crypto:** BIP39, Ed25519, HD wallet derivation, tweetnacl
-- **Blockchain:** Solana Web3.js
+- **Crypto:** BIP39, Ed25519, HD wallet derivation, tweetnacl, ethers
+- **Blockchain:** Solana Web3.js, ethers (Ethereum)
 - **Extension:** Chrome Manifest V3, Service Workers
 - **Optional:** Privacy pool integration for unlinkable transfers (fully functional and tested ✅)
 - **Monitoring:** Background balance monitoring service (configurable interval)
@@ -174,12 +182,10 @@ Burner wallets provide site isolation and security by design. Private transfers 
 
 ## Configuration
 
-- **Environment Variables:** `.env` file in `packages/extension/`
-  - `VITE_SOLANA_RPCS` - Comma-separated list of Solana RPC endpoints for rotation
-    - Example: `VITE_SOLANA_RPCS=https://api.mainnet-beta.solana.com,https://solana-api.projectserum.com`
-  - `VITE_BALANCE_CHECK_INTERVAL_MS` - Balance monitoring interval in milliseconds (default: 30000 = 30 seconds)
-    - Minimum: 5000 (5 seconds), Maximum: 300000 (5 minutes)
-    - Example: `VITE_BALANCE_CHECK_INTERVAL_MS=60000` (check every minute)
+- **RPC lists** are defined in `packages/extension/src/config/rpcs.ts` (versioned). Optional overrides via `.env` in `packages/extension/`:
+  - `VITE_SOLANA_RPCS` — Comma-separated Solana RPC endpoints for rotation
+  - `VITE_ETHEREUM_RPCS` — Comma-separated Ethereum RPC endpoints for rotation
+- **Balance monitoring:** `VITE_BALANCE_CHECK_INTERVAL_MS` — interval in ms (default: 30000). Min: 5000, max: 300000. Example: `VITE_BALANCE_CHECK_INTERVAL_MS=60000`
 
 ---
 
